@@ -5,15 +5,17 @@ import plotly.graph_objects as go
 from scipy.optimize import linprog
 from scipy.optimize import linear_sum_assignment
 
+
 st.set_page_config(
-    page_title="OptiIO | Investigación de Operaciones",
+    page_title="JB OptiMid | Investigación de Operaciones",
     page_icon="📊",
     layout="wide"
 )
 
-st.title("📊 OptiIO")
+st.title("📊 JB OptiMid")
 st.write("Asistente Virtual de Investigación de Operaciones")
 st.divider()
+
 
 modulo = st.sidebar.radio(
     "📚 Menú principal",
@@ -246,13 +248,15 @@ def calcular_vertices(a1, b1, d1, a2, b2, d2):
 
     return sorted(vertices, key=lambda punto: (punto[0], punto[1]))
 
+
 if modulo == "Inicio":
-    st.header("¡Bienvenido a OptiIO!")
+    st.header("¡Bienvenido a JB OptiMid!")
 
     st.write(
         "Aprende, modela y resuelve problemas de Investigación "
         "de Operaciones mediante procedimientos paso a paso."
     )
+
 
     col1, col2, col3 = st.columns(3)
 
@@ -1522,8 +1526,10 @@ else:
 
 
 
+
 st.divider()
 st.caption(
-    "OptiIO | Proyecto de Investigación de Operaciones | "
+    "JB OptiMid | Proyecto de Investigación de Operaciones | "
     "Universidad Mariano Gálvez de Guatemala"
 )
+
