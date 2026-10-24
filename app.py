@@ -12,9 +12,369 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 JB OptiMid")
-st.write("Asistente Virtual de Investigación de Operaciones")
-st.divider()
+
+
+
+
+st.markdown("""
+<style>
+/* ==================================================
+   JB OPTIMID — NEON FUTURE
+   Azul eléctrico · Cian · Violeta
+   ================================================== */
+
+/* Fondo principal */
+.stApp,
+[data-testid="stAppViewContainer"] {
+    background:
+        radial-gradient(ellipse at 8% 0%, rgba(32, 85, 180, 0.20), transparent 38%),
+        radial-gradient(ellipse at 92% 12%, rgba(125, 55, 210, 0.17), transparent 34%),
+        linear-gradient(145deg, #070b18 0%, #0b1224 52%, #101027 100%);
+    color: #edf4ff;
+}
+
+/* Cabecera de Streamlit */
+[data-testid="stHeader"] {
+    background: rgba(7, 11, 24, 0.85);
+}
+
+/* Barra lateral */
+[data-testid="stSidebar"] {
+    background:
+        linear-gradient(165deg, #101a35 0%, #10142b 55%, #21123b 100%);
+    border-right: 1px solid #344775;
+    box-shadow: 5px 0 28px rgba(50, 92, 220, 0.10);
+}
+
+[data-testid="stSidebar"] * {
+    color: #edf4ff;
+}
+
+/* Opciones del menú */
+[data-testid="stSidebar"] [role="radiogroup"] label {
+    background: rgba(31, 48, 83, 0.78);
+    border: 1px solid #30466f;
+    border-radius: 11px;
+    padding: 9px 12px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+
+[data-testid="stSidebar"] [role="radiogroup"] label:hover {
+    background: linear-gradient(100deg, #193f70, #39245f);
+    border-color: #49cfff;
+}
+
+/* Texto general */
+.stApp p,
+.stApp li,
+.stApp label,
+.stApp [data-testid="stMarkdownContainer"] {
+    color: #d6e4fa;
+}
+
+.stApp h1,
+.stApp h2,
+.stApp h3,
+.stApp h4 {
+    color: #f3f7ff !important;
+    letter-spacing: -0.35px;
+}
+
+/* Encabezados con acento luminoso */
+.stApp h1 {
+    text-shadow: 0 0 22px rgba(55, 164, 255, 0.18);
+}
+
+.stApp h2 {
+    text-shadow: 0 0 15px rgba(71, 123, 255, 0.12);
+}
+
+/* Tarjetas y contenedores */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(
+        145deg,
+        rgba(22, 35, 64, 0.96),
+        rgba(18, 22, 46, 0.96)
+    );
+    border: 1px solid #34466f;
+    border-radius: 16px;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.18);
+}
+
+/* Métricas y resultados numéricos */
+[data-testid="stMetric"] {
+    background: linear-gradient(
+        135deg,
+        rgba(19, 44, 78, 0.98),
+        rgba(34, 26, 69, 0.98)
+    );
+    border: 1px solid #4565a0;
+    border-radius: 15px;
+    padding: 18px;
+    box-shadow:
+        0 0 18px rgba(39, 123, 255, 0.09),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] * {
+    color: #b8cbed !important;
+}
+
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] * {
+    color: #65dcff !important;
+    text-shadow: 0 0 15px rgba(49, 205, 255, 0.22);
+}
+
+[data-testid="stMetricDelta"] {
+    color: #65e6c1 !important;
+}
+
+/* Todos los botones: texto legible siempre */
+.stButton > button,
+.stFormSubmitButton > button,
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-primary"] {
+    background: linear-gradient(110deg, #203e6d, #35265f) !important;
+    color: #ffffff !important;
+    border: 1px solid #5378b6 !important;
+    border-radius: 11px !important;
+    font-weight: 650 !important;
+    min-height: 43px;
+    opacity: 1 !important;
+    box-shadow: 0 4px 14px rgba(22, 83, 180, 0.14);
+    transition: all 0.2s ease;
+}
+
+.stButton > button *,
+.stFormSubmitButton > button *,
+[data-testid="stBaseButton-secondary"] *,
+[data-testid="stBaseButton-primary"] * {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.stButton > button:hover,
+.stFormSubmitButton > button:hover,
+[data-testid="stBaseButton-secondary"]:hover {
+    background: linear-gradient(110deg, #176baf, #6236a1) !important;
+    border-color: #63e5ff !important;
+    box-shadow: 0 0 17px rgba(45, 190, 255, 0.20);
+    color: #ffffff !important;
+}
+
+/* Botón principal */
+.stButton > button[kind="primary"],
+[data-testid="stBaseButton-primary"] {
+    background: linear-gradient(105deg, #087fca 0%, #414bd5 55%, #783bd0 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #62cfff !important;
+    box-shadow: 0 0 19px rgba(54, 132, 255, 0.24);
+}
+
+.stButton > button[kind="primary"] *,
+[data-testid="stBaseButton-primary"] * {
+    color: #ffffff !important;
+}
+
+.stButton > button[kind="primary"]:hover,
+[data-testid="stBaseButton-primary"]:hover {
+    background: linear-gradient(105deg, #119ce8, #5949ee 58%, #9149e8) !important;
+    box-shadow: 0 0 24px rgba(61, 188, 255, 0.32);
+}
+
+/* Campos de texto, números y áreas de texto */
+[data-testid="stNumberInput"] input,
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stDateInput"] input {
+    background: #111c32 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: 1px solid #40577f !important;
+    border-radius: 9px !important;
+    caret-color: #5be1ff !important;
+}
+
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stTextInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus {
+    border-color: #4ad9ff !important;
+    box-shadow: 0 0 0 1px #4ad9ff, 0 0 12px rgba(74, 217, 255, 0.13) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #a6b9d5 !important;
+    -webkit-text-fill-color: #a6b9d5 !important;
+    opacity: 1 !important;
+}
+
+/* Botones + y - de campos numéricos */
+[data-testid="stNumberInput"] button {
+    background: #223655 !important;
+    color: #ffffff !important;
+    border-color: #40577f !important;
+}
+
+[data-testid="stNumberInput"] button * {
+    color: #ffffff !important;
+}
+
+/* Selectores desplegables */
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+    background: #111c32 !important;
+    color: #ffffff !important;
+    border-color: #40577f !important;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] *,
+[data-testid="stMultiSelect"] [data-baseweb="select"] * {
+    color: #ffffff !important;
+}
+
+[data-baseweb="popover"],
+[data-baseweb="menu"],
+[role="listbox"] {
+    background: #15213a !important;
+    color: #ffffff !important;
+    border: 1px solid #40577f !important;
+}
+
+[role="option"] {
+    background: #15213a !important;
+    color: #ffffff !important;
+}
+
+[role="option"]:hover,
+[role="option"][aria-selected="true"] {
+    background: #294774 !important;
+    color: #ffffff !important;
+}
+
+/* Casillas y opciones */
+[data-testid="stCheckbox"] label,
+[data-testid="stRadio"] label {
+    color: #e8f0ff !important;
+}
+
+/* Deslizadores */
+[data-testid="stSlider"] {
+    color: #55d8ff !important;
+}
+
+/* Tablas */
+[data-testid="stDataFrame"] {
+    border: 1px solid #344b72;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Mensajes informativos */
+[data-testid="stAlert"] {
+    background: linear-gradient(115deg, #142a49, #211b43);
+    border: 1px solid #3c6090;
+    border-radius: 12px;
+    color: #eff6ff;
+}
+
+/* Separadores */
+hr {
+    border-color: #304364;
+}
+
+/* Pie de página */
+.pie-optimid {
+    color: #9eb4d3;
+    text-align: center;
+    font-size: 0.85rem;
+    padding: 14px 0;
+}
+
+
+/* Barra de progreso fija para Tutor y prácticas */
+.tutor-progreso-flotante {
+    position: fixed;
+    top: 4.5rem;
+    right: 1.5rem;
+    z-index: 999999;
+    width: 230px;
+    padding: 14px;
+    border: 1px solid rgba(100, 180, 255, 0.45);
+    border-radius: 14px;
+    background: rgba(15, 25, 45, 0.96);
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(12px);
+}
+
+.tutor-progreso-flotante .titulo {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.tutor-progreso-flotante .datos {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.78rem;
+}
+
+.tutor-progreso-flotante .porcentaje {
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-top: 8px;
+}
+
+.tutor-progreso-flotante .barra {
+    height: 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.tutor-progreso-flotante .relleno {
+    height: 100%;
+    background: #35d0a0;
+    border-radius: 10px;
+}
+
+/* En pantallas pequeñas, ubicarla debajo del encabezado */
+@media (max-width: 700px) {
+    .tutor-progreso-flotante {
+        top: 4rem;
+        right: 0.5rem;
+        width: 185px;
+        padding: 10px;
+    }
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
+
+# Logotipo de JB OptiMid en el menú lateral
+import os
+
+ruta_logo = os.path.join("assets", "logo_jb_optimid.png")
+
+if os.path.exists(ruta_logo):
+    st.sidebar.image(ruta_logo, use_container_width=True)
+    st.sidebar.markdown(
+        "<h3 style='text-align:center;'>JB OptiMid</h3>",
+        unsafe_allow_html=True
+    )
+
+st.sidebar.divider()
+
 
 
 modulo = st.sidebar.radio(
@@ -249,25 +609,96 @@ def calcular_vertices(a1, b1, d1, a2, b2, d2):
     return sorted(vertices, key=lambda punto: (punto[0], punto[1]))
 
 
+
 if modulo == "Inicio":
-    st.header("¡Bienvenido a JB OptiMid!")
+    st.markdown("""
+    <div style="margin-bottom: 24px;">
+        <div style="
+            color: #1769aa;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        ">
+            TU ESPACIO DE APRENDIZAJE
+        </div>
+        <h1 style="margin-top: 6px; margin-bottom: 8px;">
+            ¡Bienvenido a JB OptiMid!
+        </h1>
+        <p style="
+            color: #526781;
+            font-size: 1.08rem;
+            max-width: 800px;
+        ">
+            Convierte problemas en decisiones. Modela, calcula y
+            comprende los métodos de Investigación de Operaciones
+            paso a paso.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.write(
-        "Aprende, modela y resuelve problemas de Investigación "
-        "de Operaciones mediante procedimientos paso a paso."
-    )
-
+    st.subheader("Explora tus herramientas")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.info("🧮 **Calcula**\n\nResuelve problemas con tus propios datos.")
+        with st.container(border=True):
+            st.markdown("## 🧮")
+            st.markdown("### Modela y resuelve")
+            st.write(
+                "Define funciones objetivo, restricciones y "
+                "encuentra soluciones para tus problemas."
+            )
+            st.caption("Programación lineal · Método gráfico")
 
     with col2:
-        st.info("📈 **Comprende**\n\nConsulta fórmulas y procedimientos.")
+        with st.container(border=True):
+            st.markdown("## 📊")
+            st.markdown("### Analiza resultados")
+            st.write(
+                "Explora procedimientos, tablas, restricciones "
+                "y resultados para comprender cada solución."
+            )
+            st.caption("Simplex · Transporte · Asignación")
 
     with col3:
-        st.info("🎯 **Practica**\n\nPrepárate con ejercicios.")
+        with st.container(border=True):
+            st.markdown("## 🎓")
+            st.markdown("### Aprende practicando")
+            st.write(
+                "Repasa conceptos, resuelve preguntas y recibe "
+                "retroalimentación para reforzar lo aprendido."
+            )
+            st.caption("Inventarios · Tutor y prácticas")
+
+    st.markdown("")
+
+    st.subheader("¿Cómo empezar?")
+
+    st.info(
+        "Selecciona un módulo en el menú de la izquierda. "
+        "Introduce tus datos, ejecuta el cálculo y revisa "
+        "el procedimiento antes de interpretar el resultado."
+    )
+
+    st.markdown("""
+    <div style="
+        background: linear-gradient(110deg, #e4f3ff, #e7fbfa);
+        border: 1px solid #c9e8f5;
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin-top: 12px;
+    ">
+        <div style="font-size: 1.05rem; font-weight: 700; color: #143b62;">
+            💡 Aprende el procedimiento, no solo la respuesta
+        </div>
+        <p style="color: #385773; margin-bottom: 0;">
+            JB OptiMid te ayuda a relacionar los datos del problema
+            con su modelo matemático y a interpretar los resultados.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 elif modulo in ["Programación lineal", "Método gráfico"]:
     st.header("🧮 " + modulo)
@@ -314,163 +745,228 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
     st.latex(r"x,y\geq0")
 
     if st.button("Resolver problema", type="primary"):
-        datos_validos = (
-            all(np.isfinite(v) for v in [cx, cy, a1, b1, d1, a2, b2, d2])
-            and (a1 != 0 or b1 != 0)
-            and (a2 != 0 or b2 != 0)
-            and d1 >= 0
-            and d2 >= 0
-        )
+        datos = [cx, cy, a1, b1, d1, a2, b2, d2]
 
-        if not datos_validos:
+        # 1. Validar los datos antes de resolver
+        if not all(np.isfinite(v) for v in datos):
             st.error(
-                "Revisa los datos: cada restricción debe tener al menos "
-                "un coeficiente distinto de cero y límites no negativos."
+                "Los datos contienen valores no válidos. "
+                "Introduce solamente números finitos."
             )
+
+        elif (a1 == 0 and b1 == 0) or (a2 == 0 and b2 == 0):
+            st.error(
+                "Cada restricción debe tener al menos un "
+                "coeficiente distinto de cero."
+            )
+
+        elif d1 < 0 or d2 < 0:
+            st.error(
+                "Los límites deben ser no negativos en esta "
+                "versión, que utiliza restricciones de tipo ≤ "
+                "y variables no negativas."
+            )
+
         else:
-            resultado = resolver_modelo(
-                objetivo, cx, cy, a1, b1, d1, a2, b2, d2
-            )
-
-            if resultado.success:
-                x = resultado.x[0]
-                y = resultado.x[1]
-                z = cx * x + cy * y
-
-                st.subheader("Resultado óptimo")
-
-                r1, r2, r3 = st.columns(3)
-                r1.metric("Valor de x", f"{x:.4f}")
-                r2.metric("Valor de y", f"{y:.4f}")
-                r3.metric("Valor de Z", f"{z:.4f}")
-
-                st.subheader("Procedimiento")
-
-                st.write("**1. Función objetivo evaluada**")
-                st.latex(rf"Z={cx:g}({x:.4f})+{cy:g}({y:.4f})={z:.4f}")
-
-                st.write("**2. Verificación de las restricciones**")
-                valor1 = a1 * x + b1 * y
-                valor2 = a2 * x + b2 * y
-
-                st.latex(
-                    rf"{a1:g}({x:.4f})+{b1:g}({y:.4f})"
-                    rf"={valor1:.4f}\leq {d1:g}"
-                )
-                st.latex(
-                    rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
-                    rf"={valor2:.4f}\leq {d2:g}"
+            # 2. Ejecutar el solucionador y controlar posibles errores
+            try:
+                resultado = resolver_modelo(
+                    objetivo, cx, cy, a1, b1, d1, a2, b2, d2
                 )
 
-                st.success(
-                    f"Solución encontrada: x = {x:.4f}, y = {y:.4f}, "
-                    f"Z = {z:.4f}."
+            except (ValueError, TypeError, FloatingPointError) as error:
+                st.error(
+                    "No se pudieron procesar los datos del modelo. "
+                    "Revisa los coeficientes e inténtalo de nuevo."
                 )
+                st.caption(f"Detalle técnico: {error}")
 
-                st.subheader("Gráfica")
-                mostrar_grafica(
-                    cx, cy, a1, b1, d1, a2, b2, d2, x, y
-                )
-		
-		
-                if modulo == "Método gráfico":
-                    st.subheader("Tabla de vértices factibles")
+            else:
+                # 3. Interpretar el resultado según el estado
+                if resultado.status == 0 and resultado.success:
+                    x = resultado.x[0]
+                    y = resultado.x[1]
+                    z = cx * x + cy * y
 
-                    vertices = calcular_vertices(
-                        a1, b1, d1, a2, b2, d2
+                    st.subheader("Resultado óptimo")
+
+                    r1, r2, r3 = st.columns(3)
+                    r1.metric("Valor de x", f"{x:.4f}")
+                    r2.metric("Valor de y", f"{y:.4f}")
+                    r3.metric("Valor de Z", f"{z:.4f}")
+
+                    st.subheader("Procedimiento")
+
+                    st.write("**1. Función objetivo evaluada**")
+                    st.latex(
+                        rf"Z={cx:g}({x:.4f})+{cy:g}({y:.4f})={z:.4f}"
                     )
 
-                    filas = []
+                    st.write("**2. Verificación de las restricciones**")
 
-                    for numero, (vx, vy) in enumerate(vertices, start=1):
-                        valor_z = cx * vx + cy * vy
+                    valor1 = a1 * x + b1 * y
+                    valor2 = a2 * x + b2 * y
 
-                        filas.append({
-                            "Vértice": f"V{numero}",
-                            "x": round(vx, 4),
-                            "y": round(vy, 4),
-                            "Valor de Z": round(valor_z, 4)
-                        })
-
-                    st.dataframe(
-                        filas,
-                        use_container_width=True,
-                        hide_index=True
+                    st.latex(
+                        rf"{a1:g}({x:.4f})+{b1:g}({y:.4f})"
+                        rf"={valor1:.4f}\leq {d1:g}"
+                    )
+                    st.latex(
+                        rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
+                        rf"={valor2:.4f}\leq {d2:g}"
                     )
 
-                    st.subheader("Procedimiento del método gráfico")
-
-                    st.write(
-                        "**Paso 1.** Se determinan las intersecciones "
-                        "de las rectas con los ejes y entre sí."
+                    st.success(
+                        f"Solución encontrada: x = {x:.4f}, "
+                        f"y = {y:.4f}, Z = {z:.4f}."
                     )
 
-                    st.write(
-                        "**Paso 2.** Se comprueba cuáles puntos cumplen "
-                        "todas las restricciones y la no negatividad."
+                    st.subheader("Gráfica")
+                    mostrar_grafica(
+                        cx, cy, a1, b1, d1, a2, b2, d2, x, y
                     )
 
-                    st.write(
-                        "**Paso 3.** Se evalúa la función objetivo "
-                        "en cada vértice factible."
-                    )
+                    if modulo == "Método gráfico":
+                        st.subheader("Tabla de vértices factibles")
 
-                    st.write("**Paso 4. Comparación de resultados**")
-
-                    if vertices:
-                        valores_z = [
-                            cx * vx + cy * vy
-                            for vx, vy in vertices
-                        ]
-
-                        if objetivo == "Maximizar":
-                            mejor_z = max(valores_z)
-                        else:
-                            mejor_z = min(valores_z)
-
-                        mejores = [
-                            (vx, vy)
-                            for (vx, vy), vz in zip(vertices, valores_z)
-                            if abs(vz - mejor_z) < 1e-7
-                        ]
-
-                        for vx, vy in mejores:
-                            st.latex(
-                                rf"Z={cx:g}({vx:.4f})"
-                                rf"+{cy:g}({vy:.4f})"
-                                rf"={mejor_z:.4f}"
-                            )
-
-                        if len(mejores) == 1:
-                            vx, vy = mejores[0]
-                            st.success(
-                                f"El vértice óptimo es "
-                                f"({vx:.4f}, {vy:.4f}), "
-                                f"con Z = {mejor_z:.4f}."
-                            )
-                        else:
-                            st.success(
-                                f"Hay múltiples vértices óptimos "
-                                f"con el mismo valor Z = {mejor_z:.4f}."
-                            )
-                    else:
-                        st.warning(
-                            "No se encontraron vértices factibles."
+                        vertices = calcular_vertices(
+                            a1, b1, d1, a2, b2, d2
                         )
 
+                        filas = []
 
-            elif resultado.status == 3:
-                st.error(
-                    "El modelo no tiene un óptimo finito: la función "
-                    "objetivo puede mejorar indefinidamente."
-                )
-            elif resultado.status == 2:
-                st.error(
-                    "El modelo no tiene solución factible con las "
-                    "restricciones ingresadas."
-                )
-            else:
-                st.error("No se pudo resolver el modelo. Revisa los datos.")
+                        for numero, (vx, vy) in enumerate(
+                            vertices, start=1
+                        ):
+                            valor_z = cx * vx + cy * vy
+
+                            filas.append({
+                                "Vértice": f"V{numero}",
+                                "x": round(vx, 4),
+                                "y": round(vy, 4),
+                                "Valor de Z": round(valor_z, 4)
+                            })
+
+                        st.dataframe(
+                            filas,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        st.subheader("Procedimiento del método gráfico")
+
+                        st.write(
+                            "**Paso 1.** Se calculan las intersecciones "
+                            "de las rectas con los ejes y entre sí."
+                        )
+                        st.write(
+                            "**Paso 2.** Se verifican las restricciones "
+                            "y las condiciones de no negatividad."
+                        )
+                        st.write(
+                            "**Paso 3.** Se evalúa la función objetivo "
+                            "en cada vértice factible identificado."
+                        )
+                        st.write(
+                            "**Paso 4.** Se comparan los valores de Z."
+                        )
+
+                        if vertices:
+                            valores_z = [
+                                cx * vx + cy * vy
+                                for vx, vy in vertices
+                            ]
+
+                            mejor_z = (
+                                max(valores_z)
+                                if objetivo == "Maximizar"
+                                else min(valores_z)
+                            )
+
+                            mejores = [
+                                (vx, vy)
+                                for (vx, vy), vz in zip(
+                                    vertices, valores_z
+                                )
+                                if abs(vz - mejor_z) < 1e-7
+                            ]
+
+                            for vx, vy in mejores:
+                                st.latex(
+                                    rf"Z={cx:g}({vx:.4f})"
+                                    rf"+{cy:g}({vy:.4f})"
+                                    rf"={mejor_z:.4f}"
+                                )
+
+                            if len(mejores) == 1:
+                                vx, vy = mejores[0]
+                                st.success(
+                                    f"Mejor vértice identificado: "
+                                    f"({vx:.4f}, {vy:.4f}), "
+                                    f"con Z = {mejor_z:.4f}."
+                                )
+                            else:
+                                st.success(
+                                    f"Se identificaron varios vértices "
+                                    f"con el mismo valor de Z = {mejor_z:.4f}."
+                                )
+                        else:
+                            st.warning(
+                                "No se identificaron vértices factibles "
+                                "para mostrar en la tabla. La solución "
+                                "del optimizador debe prevalecer sobre "
+                                "esta tabla incompleta."
+                            )
+
+                elif resultado.status == 2:
+                    st.error(
+                        "Modelo infactible: no existe una combinación "
+                        "de x e y que cumpla todas las restricciones."
+                    )
+                    st.info(
+                        "Revisa los límites y las restricciones. "
+                        "Puede que algunas condiciones sean incompatibles."
+                    )
+
+                elif resultado.status == 3:
+                    st.error(
+                        "Modelo no acotado: la función objetivo puede "
+                        "mejorar indefinidamente dentro de la región "
+                        "permitida."
+                    )
+                    st.info(
+                        "Revisa si faltan restricciones que limiten "
+                        "las variables o la función objetivo."
+                    )
+
+                elif resultado.status == 1:
+                    st.warning(
+                        "El solucionador alcanzó su límite de iteraciones "
+                        "antes de confirmar una solución óptima."
+                    )
+                    st.write(
+                        "Esto no demuestra que el modelo sea infactible "
+                        "ni que sea no acotado."
+                    )
+
+                elif resultado.status == 4:
+                    st.error(
+                        "El solucionador encontró dificultades numéricas "
+                        "y no pudo confirmar el resultado."
+                    )
+                    st.write(
+                        "Comprueba los coeficientes y evita combinar "
+                        "valores de escalas extremadamente diferentes."
+                    )
+
+                else:
+                    st.error(
+                        "No se pudo confirmar una solución óptima."
+                    )
+                    st.caption(
+                        f"Estado del solucionador: {resultado.status}. "
+                        f"Detalle: {resultado.message}"
+                    )
 
 
 elif modulo == "Método Simplex":
@@ -518,80 +1014,148 @@ elif modulo == "Método Simplex":
     st.latex(rf"{a2:g}x+{b2:g}y\leq {d2:g}")
     st.latex(r"x,y\geq0")
 
+
     if st.button("Ejecutar método Simplex", type="primary"):
-        if (a1 < 0 or b1 < 0 or a2 < 0 or b2 < 0):
+        # 1. Detectar restricciones imposibles
+        if (
+            (a1 == 0 and b1 == 0 and d1 < 0)
+            or (a2 == 0 and b2 == 0 and d2 < 0)
+        ):
             st.error(
-                "Para esta versión, los coeficientes de las "
-                "restricciones deben ser no negativos."
+                "Modelo inviable: una restricción exige que "
+                "0 sea menor o igual que un número negativo."
             )
+
+        # 2. Validar los coeficientes admitidos por esta versión
+        elif a1 < 0 or b1 < 0 or a2 < 0 or b2 < 0:
+            st.error(
+                "Esta versión de Simplex solo admite coeficientes "
+                "no negativos en las restricciones."
+            )
+
+        # 3. Detectar si ambas restricciones carecen de variables
+        elif (
+            a1 == 0 and b1 == 0 and d1 >= 0
+            and a2 == 0 and b2 == 0 and d2 >= 0
+        ):
+            st.error(
+                "No hay restricciones que limiten las variables. "
+                "Revisa los coeficientes ingresados."
+            )
+
         else:
-            tabla, base, historial, terminado = resolver_simplex(
-                c1, c2, a1, b1, d1, a2, b2, d2
-            )
+            try:
 
-            for paso in historial:
-                st.subheader(paso["titulo"])
-                st.write(paso["explicacion"])
+                tabla, base, historial, terminado = resolver_simplex(
+                    c1, c2, a1, b1, d1, a2, b2, d2
+                )
 
-                tabla_paso = paso["tabla"]
-                base_paso = paso["base"]
+                # Mostrar el procedimiento paso a paso
+                for paso in historial:
+                    st.subheader(paso["titulo"])
+                    st.write(paso["explicacion"])
 
-                encabezados = [
-                    "x", "y", "s1", "s2", "Lado derecho"
-                ]
+                    tabla_paso = paso["tabla"]
+                    base_paso = paso["base"]
 
-                filas_tabla = []
+                    encabezados = [
+                        "x", "y", "s1", "s2", "Lado derecho"
+                    ]
 
-                for i in range(2):
-                    fila = {"Base": base_paso[i]}
+                    filas_tabla = []
+
+                    for i in range(2):
+                        fila = {"Base": base_paso[i]}
+
+                        for j, encabezado in enumerate(encabezados):
+                            fila[encabezado] = round(
+                                float(tabla_paso[i, j]), 4
+                            )
+
+                        filas_tabla.append(fila)
+
+                    fila_z = {"Base": "Z"}
 
                     for j, encabezado in enumerate(encabezados):
-                        fila[encabezado] = round(
-                            tabla_paso[i, j], 4
+                        fila_z[encabezado] = round(
+                            float(tabla_paso[2, j]), 4
                         )
 
-                    filas_tabla.append(fila)
+                    filas_tabla.append(fila_z)
 
-                fila_z = {"Base": "Z"}
-
-                for j, encabezado in enumerate(encabezados):
-                    fila_z[encabezado] = round(
-                        tabla_paso[2, j], 4
+                    st.dataframe(
+                        filas_tabla,
+                        use_container_width=True,
+                        hide_index=True
                     )
 
-                filas_tabla.append(fila_z)
+                # Mostrar la solución si Simplex terminó correctamente
+                if terminado:
+                    solucion = {"x": 0.0, "y": 0.0}
 
-                st.dataframe(
-                    filas_tabla,
-                    use_container_width=True,
-                    hide_index=True
-                )
+                    for i, variable in enumerate(base):
+                        if variable in solucion:
+                            solucion[variable] = float(tabla[i, -1])
 
-            if terminado:
-                solucion = {"x": 0.0, "y": 0.0}
+                    x_opt = solucion["x"]
+                    y_opt = solucion["y"]
+                    z_opt = c1 * x_opt + c2 * y_opt
 
-                for i, variable in enumerate(base):
-                    if variable in solucion:
-                        solucion[variable] = tabla[i, -1]
+                    # Comprobar que la solución cumpla las restricciones
+                    cumple_r1 = a1 * x_opt + b1 * y_opt <= d1 + 1e-7
+                    cumple_r2 = a2 * x_opt + b2 * y_opt <= d2 + 1e-7
 
-                x_opt = solucion["x"]
-                y_opt = solucion["y"]
-                z_opt = c1 * x_opt + c2 * y_opt
+                    if (
+                        x_opt < -1e-7
+                        or y_opt < -1e-7
+                        or not cumple_r1
+                        or not cumple_r2
+                    ):
+                        st.error(
+                            "El algoritmo terminó, pero la solución "
+                            "obtenida no cumple todas las restricciones. "
+                            "Revisa el modelo."
+                        )
+                    else:
+                        st.subheader("Resultado final")
+                        r1, r2, r3 = st.columns(3)
+                        r1.metric("x óptimo", f"{x_opt:.4f}")
+                        r2.metric("y óptimo", f"{y_opt:.4f}")
+                        r3.metric("Z máximo", f"{z_opt:.4f}")
 
-                st.subheader("Resultado final")
-                r1, r2, r3 = st.columns(3)
-                r1.metric("x óptimo", f"{x_opt:.4f}")
-                r2.metric("y óptimo", f"{y_opt:.4f}")
-                r3.metric("Z máximo", f"{z_opt:.4f}")
+                        st.write("**Comprobación de las restricciones**")
+                        st.write(
+                            f"R1: {a1:g}({x_opt:.4f}) + "
+                            f"{b1:g}({y_opt:.4f}) = "
+                            f"{a1*x_opt+b1*y_opt:.4f} ≤ {d1:g}"
+                        )
+                        st.write(
+                            f"R2: {a2:g}({x_opt:.4f}) + "
+                            f"{b2:g}({y_opt:.4f}) = "
+                            f"{a2*x_opt+b2*y_opt:.4f} ≤ {d2:g}"
+                        )
 
-                st.success(
-                    "El método Simplex alcanzó una solución óptima."
-                )
-            else:
+                        st.success(
+                            "Se obtuvo una solución que cumple "
+                            "las restricciones del modelo."
+                        )
+
+                else:
+                    st.error(
+                        "El método Simplex no alcanzó una solución "
+                        "óptima. El algoritmo actual no permite "
+                        "determinar con certeza si el modelo es "
+                        "no acotado o si el procedimiento no pudo "
+                        "completarse."
+                    )
+
+            except (ValueError, TypeError, IndexError, KeyError) as error:
                 st.error(
-                    "El modelo es no acotado o no se pudo completar "
-                    "el procedimiento. Revisa las restricciones."
+                    "No fue posible procesar el resultado de Simplex. "
+                    "Revisa los datos y la estructura del procedimiento."
                 )
+                st.caption(f"Detalle técnico: {error}")
+
 
 
 elif modulo == "Transporte y asignación":
@@ -696,6 +1260,7 @@ elif modulo == "Transporte y asignación":
                     method="highs"
                 )
 
+                
                 if resultado.success:
                     envios = resultado.x.reshape(
                         num_origenes, num_destinos
@@ -703,16 +1268,27 @@ elif modulo == "Transporte y asignación":
 
                     st.success("¡Solución óptima encontrada!")
                     st.subheader("Plan óptimo de envíos")
-                    st.dataframe(
-                        envios,
-                        hide_index=True,
-                        column_config={
-                            f"column_{j}": st.column_config.NumberColumn(
-                                f"Destino {j+1}", format="%.2f"
-                            )
+
+                    tabla_envios = {
+                        "Origen": [
+                            f"Origen {i+1}"
+                            for i in range(num_origenes)
+                        ],
+                        **{
+                            f"Destino {j+1}": [
+                                round(float(envios[i, j]), 2)
+                                for i in range(num_origenes)
+                            ]
                             for j in range(num_destinos)
                         }
+                    }
+
+                    st.dataframe(
+                        tabla_envios,
+                        hide_index=True,
+                        use_container_width=True
                     )
+
                     st.metric(
                         "Costo mínimo total",
                         f"{resultado.fun:.2f}"
@@ -731,8 +1307,12 @@ elif modulo == "Transporte y asignación":
                         "3. Se impusieron restricciones de oferta, "
                         "demanda y no negatividad."
                     )
-                    st.write("4. Se resolvió el modelo mediante programación lineal.")
+                    st.write(
+                        "4. Se resolvió el modelo mediante programación lineal."
+                    )
+
                     st.write("**Detalle de los envíos:**")
+
                     for i in range(num_origenes):
                         for j in range(num_destinos):
                             if envios[i, j] > 1e-6:
@@ -744,6 +1324,7 @@ elif modulo == "Transporte y asignación":
                 else:
                     st.error("No fue posible encontrar una solución.")
                     st.write(resultado.message)
+
 
     else:
         st.subheader("Problema de asignación")
@@ -1398,6 +1979,11 @@ elif modulo == "Tutor y prácticas":
         }
     ]
 
+    
+    # Registrar el progreso del estudiante durante la sesión
+    if "tutor_historial" not in st.session_state:
+        st.session_state["tutor_historial"] = []
+
     st.subheader("📚 Banco de ejercicios")
     st.write(
         "Selecciona un ejercicio, responde y recibe una explicación "
@@ -1428,11 +2014,17 @@ elif modulo == "Tutor y prácticas":
         key=f"tutor_respuesta_{indice}"
     )
 
+
     if st.button("Comprobar respuesta", key="tutor_comprobar"):
         st.session_state["tutor_resultado"] = {
             "indice": indice,
             "respuesta": respuesta
         }
+
+        st.session_state["tutor_historial"].append({
+            "correcta": respuesta == ejercicio["correcta"]
+        })
+
 
     resultado = st.session_state.get("tutor_resultado")
 
@@ -1485,6 +2077,13 @@ elif modulo == "Tutor y prácticas":
                 "respuesta": respuesta_aleatoria
             }
 
+            st.session_state["tutor_historial"].append({
+                "correcta": (
+                    respuesta_aleatoria
+                    == ejercicio_aleatorio["correcta"]
+                )
+            })
+
         resultado_aleatorio = st.session_state.get(
             "tutor_resultado_aleatorio"
         )
@@ -1515,6 +2114,162 @@ elif modulo == "Tutor y prácticas":
         "banco; no genera enunciados ilimitados."
     )
 
+
+    st.divider()
+    st.subheader("📊 Mi progreso")
+
+    historial = st.session_state["tutor_historial"]
+    total_respuestas = len(historial)
+    total_correctas = sum(
+        1 for intento in historial if intento["correcta"]
+    )
+    total_incorrectas = total_respuestas - total_correctas
+
+    porcentaje = (
+        total_correctas / total_respuestas * 100
+        if total_respuestas > 0
+        else 0
+    )
+
+    st.markdown(
+        f"""
+        <div class="tutor-progreso-flotante">
+            <div class="titulo">📊 Tu progreso</div>
+            <div class="datos">
+                <span>Respondidas: {total_respuestas}</span>
+                <span>Correctas: {total_correctas}</span>
+            </div>
+            <div class="porcentaje">{porcentaje:.1f}%</div>
+            <div class="barra">
+                <div class="relleno" style="width: {porcentaje}%;"></div>
+            </div>
+            <div style="font-size:0.75rem; margin-top:6px;">
+                Incorrectas: {total_incorrectas}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+
+    st.divider()
+    st.subheader("🧮 Práctica numérica variable")
+
+    st.write(
+        "Genera ejercicios nuevos de sustitución en la función "
+        "objetivo. Los valores cambian en cada generación."
+    )
+
+    if st.button(
+        "Crear nuevo ejercicio numérico",
+        key="tutor_numerico_generar"
+    ):
+        coef_x = random.randint(10, 50)
+        coef_y = random.randint(10, 40)
+        valor_x = random.randint(1, 10)
+        valor_y = random.randint(1, 10)
+
+        resultado_correcto = (
+            coef_x * valor_x + coef_y * valor_y
+        )
+
+        opciones = {
+            resultado_correcto,
+            resultado_correcto + random.randint(5, 20),
+            resultado_correcto - random.randint(5, 20),
+            resultado_correcto + random.randint(21, 40)
+        }
+
+        while len(opciones) < 4:
+            opciones.add(
+                resultado_correcto + random.randint(-50, 50)
+            )
+
+        opciones = list(opciones)
+        random.shuffle(opciones)
+
+        st.session_state["tutor_numerico"] = {
+            "coef_x": coef_x,
+            "coef_y": coef_y,
+            "x": valor_x,
+            "y": valor_y,
+            "correcta": resultado_correcto,
+            "opciones": opciones
+        }
+
+        st.session_state.pop("tutor_numerico_resultado", None)
+        st.session_state["tutor_numerico_version"] = (
+            st.session_state.get("tutor_numerico_version", 0) + 1
+        )
+
+    if "tutor_numerico" in st.session_state:
+        ejercicio_num = st.session_state["tutor_numerico"]
+
+        st.markdown(
+            f"**Problema:** Calcula "
+            f"Z = {ejercicio_num['coef_x']}x + "
+            f"{ejercicio_num['coef_y']}y cuando "
+            f"x = {ejercicio_num['x']} e "
+            f"y = {ejercicio_num['y']}."
+        )
+
+        st.latex(
+            rf"Z={ejercicio_num['coef_x']}({ejercicio_num['x']})"
+            rf"+{ejercicio_num['coef_y']}({ejercicio_num['y']})"
+        )
+
+        version_num = st.session_state.get(
+            "tutor_numerico_version", 0
+        )
+
+        respuesta_num = st.radio(
+            "Selecciona el resultado:",
+            ejercicio_num["opciones"],
+            key=f"tutor_numerico_respuesta_{version_num}"
+        )
+
+        if st.button(
+            "Evaluar respuesta numérica",
+            key="tutor_numerico_evaluar"
+        ):
+            es_correcta = (
+                respuesta_num == ejercicio_num["correcta"]
+            )
+
+            st.session_state["tutor_numerico_resultado"] = {
+                "correcta": es_correcta
+            }
+
+            st.session_state["tutor_historial"].append({
+                "correcta": es_correcta
+            })
+
+        resultado_num = st.session_state.get(
+            "tutor_numerico_resultado"
+        )
+
+        if resultado_num is not None:
+            if resultado_num["correcta"]:
+                st.success("¡Correcto! El cálculo es correcto.")
+            else:
+                st.error("Respuesta incorrecta. Revisa la sustitución.")
+
+            st.write(
+                f"**Respuesta correcta:** "
+                f"{ejercicio_num['correcta']}"
+            )
+
+            st.info(
+                f"Procedimiento: Z = "
+                f"{ejercicio_num['coef_x']} × {ejercicio_num['x']} "
+                f"+ {ejercicio_num['coef_y']} × {ejercicio_num['y']} "
+                f"= {ejercicio_num['coef_x'] * ejercicio_num['x']} "
+                f"+ {ejercicio_num['coef_y'] * ejercicio_num['y']} "
+                f"= {ejercicio_num['correcta']}."
+            )
+
+
 else:
     st.header(modulo)
     st.warning(
@@ -1531,5 +2286,12 @@ st.divider()
 st.caption(
     "JB OptiMid | Proyecto de Investigación de Operaciones | "
     "Universidad Mariano Gálvez de Guatemala"
+)
+st.caption(
+    "Ingeniera en Sistemas y Ciencias de la Computación | Sección: A"
+)
+st.caption(
+    "Bryan Giancarlo Canil Hernández | "
+    "John Jairon Antonio Ortega Crúz"
 )
 
