@@ -391,57 +391,107 @@ modulo = st.sidebar.radio(
     ]
 )
 
+def resolver_modelo(
+    objetivo, cx, cy,
+    a1, b1, d1, op1,
+    a2, b2, d2, op2
+):
+    coeficientes = (
+        [-cx, -cy]
+        if objetivo == "Maximizar"
+        else [cx, cy]
+    )
 
-def resolver_modelo(objetivo, cx, cy, a1, b1, d1, a2, b2, d2):
-    coeficientes = [-cx, -cy] if objetivo == "Maximizar" else [cx, cy]
+    restricciones_ub = []
+    limites_ub = []
+    restricciones_eq = []
+    limites_eq = []
+
+    for a, b, d, operador in [
+        (a1, b1, d1, op1),
+        (a2, b2, d2, op2)
+    ]:
+        if operador == "≤":
+            restricciones_ub.append([a, b])
+            limites_ub.append(d)
+
+        elif operador == "≥":
+            restricciones_ub.append([-a, -b])
+            limites_ub.append(-d)
+
+        elif operador == "=":
+            restricciones_eq.append([a, b])
+            limites_eq.append(d)
 
     return linprog(
         c=coeficientes,
-        A_ub=[[a1, b1], [a2, b2]],
-        b_ub=[d1, d2],
+        A_ub=restricciones_ub or None,
+        b_ub=limites_ub or None,
+        A_eq=restricciones_eq or None,
+        b_eq=limites_eq or None,
         bounds=[(0, None), (0, None)],
         method="highs"
     )
 
 
-def mostrar_grafica(cx, cy, a1, b1, d1, a2, b2, d2, x_opt, y_opt):
-    # Calcula un rango que permita visualizar la solución
+def mostrar_grafica(
+    cx, cy,
+    a1, b1, d1, op1,
+    a2, b2, d2, op2,
+    x_opt, y_opt
+):
+    # Crear un rango que incluya el punto óptimo y las rectas
     valores_x = [0.0, x_opt]
     valores_y = [0.0, y_opt]
 
     for a, b, d in [(a1, b1, d1), (a2, b2, d2)]:
-        if a > 0:
-            valores_x.append(d / a)
-        if b > 0:
-            valores_y.append(d / b)
+        if a != 0:
+            valores_x.append(abs(d / a))
+        if b != 0:
+            valores_y.append(abs(d / b))
 
-    xmax = max(valores_x) * 1.15 + 1
-    ymax = max(valores_y) * 1.15 + 1
+    xmax = max(valores_x) * 1.25 + 5
+    ymax = max(valores_y) * 1.25 + 5
 
-    xs = np.linspace(0, xmax, 300)
-    ys = np.linspace(0, ymax, 300)
+    xs = np.linspace(0, xmax, 250)
+    ys = np.linspace(0, ymax, 250)
     X, Y = np.meshgrid(xs, ys)
 
+    def cumple(X, Y, a, b, d, operador):
+        expresion = a * X + b * Y
+        if operador == "≤":
+            return expresion <= d + 1e-9
+        elif operador == "≥":
+            return expresion >= d - 1e-9
+        return np.abs(expresion - d) <= 1e-3
+
     factible = (
-        (a1 * X + b1 * Y <= d1 + 1e-9)
-        & (a2 * X + b2 * Y <= d2 + 1e-9)
+        cumple(X, Y, a1, b1, d1, op1)
+        & cumple(X, Y, a2, b2, d2, op2)
+        & (X >= 0)
+        & (Y >= 0)
     )
 
     fig = go.Figure()
 
-    # Sombrear la región que cumple todas las restricciones
-    fig.add_trace(go.Scatter(
-        x=X[factible],
-        y=Y[factible],
-        mode="markers",
-        marker=dict(size=3, color="lightgreen", opacity=0.25),
-        name="Región factible"
-    ))
+    # Mostrar los puntos de la región factible
+    if np.any(factible):
+        fig.add_trace(go.Scatter(
+            x=X[factible],
+            y=Y[factible],
+            mode="markers",
+            marker=dict(
+                size=4,
+                color="lightgreen",
+                opacity=0.3
+            ),
+            name="Región factible"
+        ))
 
     # Dibujar las rectas de las restricciones
-    for a, b, d, nombre in [
-        (a1, b1, d1, "Restricción 1"),
-        (a2, b2, d2, "Restricción 2")
+    for a, b, d, operador, nombre in [
+        (a1, b1, d1, op1, "Restricción 1"),
+        (a2, b2, d2, op2, "Restricción 2")
     ]:
         if b != 0:
             y_recta = (d - a * xs) / b
@@ -449,7 +499,7 @@ def mostrar_grafica(cx, cy, a1, b1, d1, a2, b2, d2, x_opt, y_opt):
                 x=xs,
                 y=y_recta,
                 mode="lines",
-                name=nombre
+                name=f"{nombre} ({operador})"
             ))
         elif a != 0:
             x_recta = d / a
@@ -457,7 +507,7 @@ def mostrar_grafica(cx, cy, a1, b1, d1, a2, b2, d2, x_opt, y_opt):
                 x=[x_recta, x_recta],
                 y=[0, ymax],
                 mode="lines",
-                name=nombre
+                name=f"{nombre} ({operador})"
             ))
 
     # Marcar la solución óptima
@@ -483,6 +533,7 @@ def mostrar_grafica(cx, cy, a1, b1, d1, a2, b2, d2, x_opt, y_opt):
     fig.update_yaxes(range=[0, ymax], zeroline=True)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 
 def resolver_simplex(c1, c2, a1, b1, d1, a2, b2, d2):
@@ -564,19 +615,23 @@ def resolver_simplex(c1, c2, a1, b1, d1, a2, b2, d2):
     return tabla, nombres, historial, False
 
 
-def calcular_vertices(a1, b1, d1, a2, b2, d2):
-    # Candidatos iniciales: intersecciones con los ejes
+def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
     candidatos = [(0.0, 0.0)]
 
-    # Intersecciones de cada restricción con los ejes
-    for a, b, d in [(a1, b1, d1), (a2, b2, d2)]:
+    restricciones = [
+        (a1, b1, d1),
+        (a2, b2, d2)
+    ]
+
+    # Intersecciones de cada recta con los ejes
+    for a, b, d in restricciones:
         if a != 0:
             candidatos.append((d / a, 0.0))
 
         if b != 0:
             candidatos.append((0.0, d / b))
 
-    # Intersección de las dos rectas
+    # Intersección entre las dos rectas
     determinante = a1 * b2 - a2 * b1
 
     if abs(determinante) > 1e-9:
@@ -584,17 +639,24 @@ def calcular_vertices(a1, b1, d1, a2, b2, d2):
         y = (a1 * d2 - a2 * d1) / determinante
         candidatos.append((x, y))
 
-    # Conservar solamente puntos factibles y evitar duplicados
+    def cumple(valor, operador, limite):
+        if operador == "≤":
+            return valor <= limite + 1e-7
+        elif operador == "≥":
+            return valor >= limite - 1e-7
+        else:
+            return abs(valor - limite) <= 1e-7
+
     vertices = []
 
     for x, y in candidatos:
-        if x < -1e-9 or y < -1e-9:
+        if x < -1e-7 or y < -1e-7:
             continue
 
-        if a1 * x + b1 * y > d1 + 1e-7:
+        if not cumple(a1 * x + b1 * y, op1, d1):
             continue
 
-        if a2 * x + b2 * y > d2 + 1e-7:
+        if not cumple(a2 * x + b2 * y, op2, d2):
             continue
 
         punto = (max(0.0, x), max(0.0, y))
@@ -606,8 +668,7 @@ def calcular_vertices(a1, b1, d1, a2, b2, d2):
         ):
             vertices.append(punto)
 
-    return sorted(vertices, key=lambda punto: (punto[0], punto[1]))
-
+    return sorted(vertices)
 
 
 if modulo == "Inicio":
@@ -722,7 +783,7 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
 
     st.subheader("Restricciones")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
 
     with col1:
         a1 = st.number_input("R1: coeficiente de x", value=2.0)
@@ -733,6 +794,14 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
         b2 = st.number_input("R2: coeficiente de y", value=2.0)
 
     with col3:
+        op1 = st.selectbox(
+            "Operador R1", ["≤", "≥", "="], key="operador_r1"
+        )
+        op2 = st.selectbox(
+            "Operador R2", ["≤", "≥", "="], key="operador_r2"
+        )
+
+    with col4:
         d1 = st.number_input("R1: límite", value=100.0)
         d2 = st.number_input("R2: límite", value=80.0)
 
@@ -740,8 +809,8 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
 
     palabra = "Maximizar" if objetivo == "Maximizar" else "Minimizar"
     st.latex(rf"\text{{{palabra}}}\quad Z={cx:g}x+{cy:g}y")
-    st.latex(rf"{a1:g}x+{b1:g}y\leq {d1:g}")
-    st.latex(rf"{a2:g}x+{b2:g}y\leq {d2:g}")
+    st.latex(rf"{a1:g}x+{b1:g}y\ {op1}\ {d1:g}")
+    st.latex(rf"{a2:g}x+{b2:g}y\ {op2}\ {d2:g}")
     st.latex(r"x,y\geq0")
 
     if st.button("Resolver problema", type="primary"):
@@ -760,18 +829,14 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                 "coeficiente distinto de cero."
             )
 
-        elif d1 < 0 or d2 < 0:
-            st.error(
-                "Los límites deben ser no negativos en esta "
-                "versión, que utiliza restricciones de tipo ≤ "
-                "y variables no negativas."
-            )
 
         else:
             # 2. Ejecutar el solucionador y controlar posibles errores
             try:
                 resultado = resolver_modelo(
-                    objetivo, cx, cy, a1, b1, d1, a2, b2, d2
+                    objetivo, cx, cy,
+                    a1, b1, d1, op1,
+                    a2, b2, d2, op2
                 )
 
             except (ValueError, TypeError, FloatingPointError) as error:
@@ -807,30 +872,51 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                     valor1 = a1 * x + b1 * y
                     valor2 = a2 * x + b2 * y
 
+                    def restriccion_cumplida(valor, operador, limite):
+                        if operador == "≤":
+                            return valor <= limite + 1e-7
+                        elif operador == "≥":
+                            return valor >= limite - 1e-7
+                        return abs(valor - limite) <= 1e-7
+
                     st.latex(
                         rf"{a1:g}({x:.4f})+{b1:g}({y:.4f})"
-                        rf"={valor1:.4f}\leq {d1:g}"
+                        rf"={valor1:.4f}\ {op1}\ {d1:g}"
                     )
                     st.latex(
                         rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
-                        rf"={valor2:.4f}\leq {d2:g}"
+                        rf"={valor2:.4f}\ {op2}\ {d2:g}"
                     )
+
+                    if (
+                        restriccion_cumplida(valor1, op1, d1)
+                        and restriccion_cumplida(valor2, op2, d2)
+                    ):
+                        st.success(
+                            "La solución cumple las dos restricciones."
+                        )
+                    else:
+                        st.error(
+                            "La solución no cumple alguna restricción."
+                        )
 
                     st.success(
                         f"Solución encontrada: x = {x:.4f}, "
                         f"y = {y:.4f}, Z = {z:.4f}."
                     )
-
                     st.subheader("Gráfica")
                     mostrar_grafica(
-                        cx, cy, a1, b1, d1, a2, b2, d2, x, y
+                        cx, cy,
+                        a1, b1, d1, op1,
+                        a2, b2, d2, op2,
+                        x, y
                     )
-
                     if modulo == "Método gráfico":
                         st.subheader("Tabla de vértices factibles")
 
                         vertices = calcular_vertices(
-                            a1, b1, d1, a2, b2, d2
+                            a1, b1, d1, op1,
+                            a2, b2, d2, op2
                         )
 
                         filas = []
