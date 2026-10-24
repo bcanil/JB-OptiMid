@@ -1,6 +1,8 @@
 
 import streamlit as st
 import numpy as np
+import json
+
 import plotly.graph_objects as go
 from scipy.optimize import linprog
 from scipy.optimize import linear_sum_assignment
@@ -671,6 +673,93 @@ def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
     return sorted(vertices)
 
 
+
+# ============================================================
+# ASISTENTE IA — requiere OPENAI_API_KEY en Streamlit Secrets
+# ============================================================
+def _cliente_openai():
+    """Crea el cliente de IA si existe una clave configurada."""
+    try:
+        clave = st.secrets.get("OPENAI_API_KEY", "")
+    except Exception:
+        clave = ""
+    if not clave:
+        return None
+    try:
+        from openai import OpenAI
+        return OpenAI(api_key=clave)
+    except ImportError:
+        return None
+
+
+def _consultar_openai(instrucciones, mensaje, json_mode=False):
+    cliente = _cliente_openai()
+    if cliente is None:
+        return None, (
+            "El asistente IA aún no está configurado. El administrador debe "
+            "instalar la dependencia openai y agregar OPENAI_API_KEY en "
+            "los Secrets de Streamlit."
+        )
+    try:
+        parametros = {
+            "model": "gpt-4.1-mini",
+            "messages": [
+                {"role": "system", "content": instrucciones},
+                {"role": "user", "content": mensaje}
+            ],
+            "temperature": 0.1
+        }
+        if json_mode:
+            parametros["response_format"] = {"type": "json_object"}
+        respuesta = cliente.chat.completions.create(**parametros)
+        return respuesta.choices[0].message.content, None
+    except Exception as error:
+        return None, (
+            "No se pudo consultar la IA. Verifica la clave, conexión y límites "
+            "de uso. Detalle: " + str(error)[:200]
+        )
+
+
+def mostrar_tutor_ia(modulo_actual):
+    """Tutor restringido al contenido académico de JB OptiMid."""
+    st.divider()
+    st.subheader("🤖 Pregunta al tutor de JB OptiMid")
+    st.caption(
+        "Haz preguntas sobre Investigación de Operaciones y el módulo actual. "
+        "Las respuestas de IA pueden contener errores; verifica los cálculos."
+    )
+    clave = "tutor_ia_" + modulo_actual.replace(" ", "_").replace("ó", "o").replace("í", "i")
+    with st.form("form_" + clave):
+        pregunta = st.text_area(
+            "¿Qué deseas comprender?",
+            placeholder="Ej. ¿Cómo se interpreta la región factible?",
+            max_chars=1500,
+            key=clave
+        )
+        enviar = st.form_submit_button("Consultar al tutor", type="primary")
+    if enviar:
+        if not pregunta.strip():
+            st.warning("Escribe una pregunta antes de consultar.")
+            return
+        instrucciones = (
+            "Eres el tutor académico de JB OptiMid, una aplicación universitaria "
+            "de Investigación de Operaciones. Responde en español, de forma clara "
+            "y didáctica. El módulo actual es: " + modulo_actual + ". Limita la "
+            "respuesta a Investigación de Operaciones, matemáticas relacionadas "
+            "y al uso educativo del módulo. Si la pregunta es ajena a esos temas, "
+            "indica amablemente que no puedes ayudar con ella. No afirmes haber "
+            "ejecutado la aplicación. Si faltan datos para calcular, dilo."
+        )
+        with st.spinner("El tutor está preparando una respuesta..."):
+            respuesta, error = _consultar_openai(instrucciones, pregunta)
+        if error:
+            st.warning(error)
+        elif respuesta:
+            st.markdown("**Respuesta del tutor**")
+            st.markdown(respuesta)
+
+
+
 if modulo == "Inicio":
     st.markdown("""
     <div style="margin-bottom: 24px;">
@@ -742,6 +831,79 @@ if modulo == "Inicio":
         "el procedimiento antes de interpretar el resultado."
     )
 
+    st.subheader("✨ Analiza un enunciado con IA")
+    st.write(
+        "Describe el problema con tus palabras. En esta primera versión, "
+        "la preparación automática se habilita para programación lineal de "
+        "dos variables; otros tipos se identificarán para su integración posterior."
+    )
+    with st.form("form_analizador_ia"):
+        enunciado = st.text_area(
+            "Enunciado del problema",
+            placeholder="Ej. Una empresa fabrica dos productos...",
+            max_chars=5000,
+            key="enunciado_analizador_ia"
+        )
+        analizar = st.form_submit_button("Analizar enunciado", type="primary")
+    if analizar:
+        if not enunciado.strip():
+            st.warning("Escribe un enunciado antes de analizarlo.")
+        else:
+            instrucciones = """
+Analiza problemas de Investigación de Operaciones y devuelve SOLO JSON válido.
+Esquema: tipo (programacion_lineal, transporte, asignacion, inventarios,
+simplex, no_identificado), objetivo (Maximizar, Minimizar o cadena vacía),
+cx, cy, a1, b1, d1, a2, b2, d2 (números o null), op1, op2 (≤, ≥, = o cadena
+vacía), explicacion (cadena), faltantes (lista de cadenas), confianza
+(alta, media o baja). Nunca inventes valores. Usa null para datos ausentes.
+Interpreta solo programación lineal de dos variables y dos restricciones si
+hay evidencia suficiente. Si el problema es transporte, asignación o inventarios,
+clasifícalo sin forzar los datos al modelo de programación lineal. Responde en español.
+"""
+            with st.spinner("Analizando el enunciado..."):
+                resultado_ia, error_ia = _consultar_openai(
+                    instrucciones, enunciado, json_mode=True
+                )
+            if error_ia:
+                st.warning(error_ia)
+            else:
+                try:
+                    modelo_ia = json.loads(resultado_ia)
+                    st.session_state["modelo_ia_preparado"] = modelo_ia
+                    st.session_state["enunciado_ia_original"] = enunciado
+                except (ValueError, TypeError):
+                    st.error("La IA no devolvió un modelo válido. Intenta reformular el enunciado.")
+
+    modelo_ia = st.session_state.get("modelo_ia_preparado")
+    if modelo_ia:
+        st.markdown("#### Resultado del análisis")
+        st.info("Tipo detectado: " + str(modelo_ia.get("tipo", "no_identificado")))
+        st.write(modelo_ia.get("explicacion", ""))
+        faltantes = modelo_ia.get("faltantes") or []
+        if faltantes:
+            st.warning("Datos faltantes o por confirmar: " + "; ".join(map(str, faltantes)))
+        if modelo_ia.get("tipo") == "programacion_lineal":
+            campos = ["objetivo", "cx", "cy", "a1", "b1", "op1", "d1", "a2", "b2", "op2", "d2"]
+            st.write("**Datos extraídos. Revísalos antes de resolver:**")
+            st.json({campo: modelo_ia.get(campo) for campo in campos})
+            requeridos = ["cx", "cy", "a1", "b1", "d1", "a2", "b2", "d2"]
+            completo = (
+                all(modelo_ia.get(campo) is not None for campo in requeridos)
+                and modelo_ia.get("objetivo") in ["Maximizar", "Minimizar"]
+                and modelo_ia.get("op1") in ["≤", "≥", "="]
+                and modelo_ia.get("op2") in ["≤", "≥", "="]
+            )
+            if completo:
+                if st.button("Preparar campos de Programación lineal", type="primary"):
+                    st.session_state["ia_lp_pendiente"] = modelo_ia
+                    st.success("Datos preparados. Abre Programación lineal en el menú para cargarlos y revisarlos.")
+            else:
+                st.warning("El modelo está incompleto. Completa los campos faltantes manualmente.")
+        elif modelo_ia.get("tipo") in ["transporte", "asignacion", "inventarios", "simplex"]:
+            st.warning("Se identificó el tipo de problema, pero el llenado automático de este módulo se añadirá en una siguiente etapa. Por ahora, introduce los datos manualmente.")
+        else:
+            st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
+
     st.markdown("""
     <div style="
         background: linear-gradient(110deg, #e4f3ff, #e7fbfa);
@@ -762,6 +924,21 @@ if modulo == "Inicio":
 
 
 elif modulo in ["Programación lineal", "Método gráfico"]:
+    pendiente_ia = st.session_state.get("ia_lp_pendiente")
+    if pendiente_ia and modulo == "Programación lineal":
+        mapa_campos = {
+            "lp_objetivo": pendiente_ia.get("objetivo"),
+            "lp_cx": pendiente_ia.get("cx"), "lp_cy": pendiente_ia.get("cy"),
+            "lp_a1": pendiente_ia.get("a1"), "lp_b1": pendiente_ia.get("b1"),
+            "lp_d1": pendiente_ia.get("d1"), "lp_a2": pendiente_ia.get("a2"),
+            "lp_b2": pendiente_ia.get("b2"), "lp_d2": pendiente_ia.get("d2"),
+            "lp_op1": pendiente_ia.get("op1"), "lp_op2": pendiente_ia.get("op2")
+        }
+        for clave, valor in mapa_campos.items():
+            if valor is not None:
+                st.session_state[clave] = valor
+        st.session_state["ia_lp_pendiente"] = None
+        st.success("La IA preparó los campos. Revísalos y pulsa Resolver problema cuando estés listo.")
     st.header("🧮 " + modulo)
 
     st.write(
@@ -771,39 +948,40 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
 
     objetivo = st.selectbox(
         "¿Qué deseas hacer?",
-        ["Maximizar", "Minimizar"]
+        ["Maximizar", "Minimizar"],
+        key="lp_objetivo"
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
-        cx = st.number_input("Coeficiente de x en Z", value=40.0)
+        cx = st.number_input("Coeficiente de x en Z", value=40.0, key="lp_cx")
     with col2:
-        cy = st.number_input("Coeficiente de y en Z", value=30.0)
+        cy = st.number_input("Coeficiente de y en Z", value=30.0, key="lp_cy")
 
     st.subheader("Restricciones")
 
     col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
 
     with col1:
-        a1 = st.number_input("R1: coeficiente de x", value=2.0)
-        a2 = st.number_input("R2: coeficiente de x", value=1.0)
+        a1 = st.number_input("R1: coeficiente de x", value=2.0, key="lp_a1")
+        a2 = st.number_input("R2: coeficiente de x", value=1.0, key="lp_a2")
 
     with col2:
-        b1 = st.number_input("R1: coeficiente de y", value=1.0)
-        b2 = st.number_input("R2: coeficiente de y", value=2.0)
+        b1 = st.number_input("R1: coeficiente de y", value=1.0, key="lp_b1")
+        b2 = st.number_input("R2: coeficiente de y", value=2.0, key="lp_b2")
 
     with col3:
         op1 = st.selectbox(
-            "Operador R1", ["≤", "≥", "="], key="operador_r1"
+            "Operador R1", ["≤", "≥", "="], key="lp_op1"
         )
         op2 = st.selectbox(
-            "Operador R2", ["≤", "≥", "="], key="operador_r2"
+            "Operador R2", ["≤", "≥", "="], key="lp_op2"
         )
 
     with col4:
-        d1 = st.number_input("R1: límite", value=100.0)
-        d2 = st.number_input("R2: límite", value=80.0)
+        d1 = st.number_input("R1: límite", value=100.0, key="lp_d1")
+        d2 = st.number_input("R2: límite", value=80.0, key="lp_d2")
 
     st.subheader("Modelo matemático")
 
@@ -2367,6 +2545,9 @@ else:
 
 
 
+
+if modulo != "Inicio":
+    mostrar_tutor_ia(modulo)
 
 st.divider()
 st.caption(
