@@ -675,48 +675,50 @@ def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
 
 
 # ============================================================
-# ASISTENTE IA — requiere OPENAI_API_KEY en Streamlit Secrets
+# ASISTENTE IA — requiere GEMINI_API_KEY en Streamlit Secrets
 # ============================================================
-def _cliente_openai():
-    """Crea el cliente de IA si existe una clave configurada."""
+def _cliente_gemini():
+    """Crea el cliente Gemini usando únicamente el secreto configurado."""
     try:
-        clave = st.secrets.get("OPENAI_API_KEY", "")
+        clave = st.secrets.get("GEMINI_API_KEY", "")
     except Exception:
         clave = ""
     if not clave:
         return None
     try:
-        from openai import OpenAI
-        return OpenAI(api_key=clave)
+        from google import genai
+        return genai.Client(api_key=clave)
     except ImportError:
         return None
 
 
-def _consultar_openai(instrucciones, mensaje, json_mode=False):
-    cliente = _cliente_openai()
+def _consultar_gemini(instrucciones, mensaje, json_mode=False):
+    cliente = _cliente_gemini()
     if cliente is None:
         return None, (
-            "El asistente IA aún no está configurado. El administrador debe "
-            "instalar la dependencia openai y agregar OPENAI_API_KEY en "
-            "los Secrets de Streamlit."
+            "El asistente IA no está configurado. Agrega GEMINI_API_KEY "
+            "a los Secrets de Streamlit e instala google-genai en requirements.txt."
         )
     try:
-        parametros = {
-            "model": "gpt-4.1-mini",
-            "messages": [
-                {"role": "system", "content": instrucciones},
-                {"role": "user", "content": mensaje}
-            ],
-            "temperature": 0.1
-        }
-        if json_mode:
-            parametros["response_format"] = {"type": "json_object"}
-        respuesta = cliente.chat.completions.create(**parametros)
-        return respuesta.choices[0].message.content, None
+        from google.genai import types
+        configuracion = types.GenerateContentConfig(
+            system_instruction=instrucciones,
+            temperature=0.1,
+            response_mime_type="application/json" if json_mode else "text/plain"
+        )
+        respuesta = cliente.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=mensaje,
+            config=configuracion
+        )
+        if not respuesta.text:
+            return None, "Gemini no devolvió texto. Intenta reformular la pregunta."
+        return respuesta.text, None
     except Exception as error:
+        detalle = str(error)[:200]
         return None, (
-            "No se pudo consultar la IA. Verifica la clave, conexión y límites "
-            "de uso. Detalle: " + str(error)[:200]
+            "No se pudo consultar Gemini. Verifica la clave, conexión y límites "
+            "gratuitos. Detalle: " + detalle
         )
 
 
@@ -751,7 +753,7 @@ def mostrar_tutor_ia(modulo_actual):
             "ejecutado la aplicación. Si faltan datos para calcular, dilo."
         )
         with st.spinner("El tutor está preparando una respuesta..."):
-            respuesta, error = _consultar_openai(instrucciones, pregunta)
+            respuesta, error = _consultar_gemini(instrucciones, pregunta)
         if error:
             st.warning(error)
         elif respuesta:
@@ -861,7 +863,7 @@ hay evidencia suficiente. Si el problema es transporte, asignación o inventario
 clasifícalo sin forzar los datos al modelo de programación lineal. Responde en español.
 """
             with st.spinner("Analizando el enunciado..."):
-                resultado_ia, error_ia = _consultar_openai(
+                resultado_ia, error_ia = _consultar_gemini(
                     instrucciones, enunciado, json_mode=True
                 )
             if error_ia:
