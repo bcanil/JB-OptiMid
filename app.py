@@ -714,23 +714,26 @@ def _consultar_gemini(instrucciones, mensaje, json_mode=False):
             return None, "Gemini no devolvió texto. Intenta reformular la pregunta."
         return respuesta.text, None
     except Exception as error:
-        detalle = str(error)[:200]
-        detalle_mayusculas = detalle.upper()
+        # No exponer al usuario el detalle técnico ni posibles datos internos
+        # devueltos por el proveedor. Solo clasificar el error para orientar.
+        detalle_mayusculas = str(error).upper()
 
-        # Gemini puede devolver 503 cuando el modelo está temporalmente saturado.
-        if "503" in detalle_mayusculas and (
-            "UNAVAILABLE" in detalle_mayusculas
-            or "HIGH DEMAND" in detalle_mayusculas
-        ):
+        if any(codigo in detalle_mayusculas for codigo in ("429", "RESOURCE_EXHAUSTED", "QUOTA")):
             return None, (
-                "Gemini está temporalmente saturado y no puede atender la "
-                "solicitud en este momento. Por favor, vuelve a intentarlo "
-                "dentro de unos minutos."
+                "La IA alcanzó su límite de uso por ahora. Puedes continuar "
+                "utilizando los módulos de cálculo de JB OptiMid e intentarlo "
+                "de nuevo más tarde."
+            )
+
+        if "503" in detalle_mayusculas or "UNAVAILABLE" in detalle_mayusculas or "HIGH DEMAND" in detalle_mayusculas:
+            return None, (
+                "La IA está temporalmente ocupada. Inténtalo de nuevo dentro "
+                "de unos minutos."
             )
 
         return None, (
-            "No se pudo consultar Gemini. Verifica la clave, conexión y límites "
-            "gratuitos. Detalle: " + detalle
+            "No fue posible consultar la IA en este momento. Inténtalo más "
+            "tarde. Si el problema continúa, contacta al responsable de la aplicación."
         )
 
 
@@ -847,9 +850,9 @@ if modulo == "Inicio":
 
     st.subheader("✨ Analiza un enunciado con IA")
     st.write(
-        "Describe el problema con tus palabras. En esta primera versión, "
-        "la preparación automática se habilita para programación lineal de "
-        "dos variables; otros tipos se identificarán para su integración posterior."
+        "Describe un problema de Investigación de Operaciones. La IA identificará "
+        "el método más probable, extraerá los datos disponibles y señalará qué "
+        "información hace falta. Revisa siempre los datos antes de utilizarlos."
     )
     with st.form("form_analizador_ia"):
         enunciado = st.text_area(
@@ -864,19 +867,46 @@ if modulo == "Inicio":
             st.warning("Escribe un enunciado antes de analizarlo.")
         else:
             instrucciones = """
-Analiza problemas de Investigación de Operaciones y devuelve SOLO JSON válido.
-Esquema: tipo (programacion_lineal, transporte, asignacion, inventarios,
-simplex, no_identificado), objetivo (Maximizar, Minimizar o cadena vacía),
-cx, cy, a1, b1, d1, a2, b2, d2 (números o null), op1, op2 (≤, ≥, = o cadena
-vacía), explicacion (cadena), faltantes (lista de cadenas), confianza
-(alta, media o baja). Nunca inventes valores. Usa null para datos ausentes.
-Interpreta programación lineal de dos variables con una o más restricciones.
-Extrae únicamente las restricciones que estén explícitas en el enunciado.
-Si solo existe una restricción, deja a2, b2, d2 como null y op2 como cadena vacía;
-no inventes una segunda restricción. Si no se especifica ninguna otra condición,
-no la marques como dato faltante. Si faltan datos esenciales de una restricción
-mencionada, indícalos en faltantes. Si el problema es transporte, asignación o
-inventarios, clasifícalo sin forzar los datos al modelo de programación lineal.
+Eres un asistente académico experto en Investigación de Operaciones.
+Analiza el enunciado y devuelve SOLO un objeto JSON válido, sin Markdown.
+Nunca inventes valores. Usa null o listas vacías cuando un dato no aparezca.
+Explica el tipo detectado y distingue claramente datos explícitos de supuestos.
+
+El JSON debe contener:
+tipo (programacion_lineal, transporte, asignacion, inventarios, simplex,
+metodo_grafico, colas, pert_cpm, otro o no_identificado),
+objetivo (Maximizar, Minimizar o cadena vacía),
+explicacion (cadena), confianza (alta, media o baja),
+faltantes (lista de cadenas), datos (objeto con los datos específicos detectados).
+
+Para programacion_lineal, metodo_grafico y simplex, datos debe incluir:
+cx, cy, a1, b1, d1, a2, b2, d2 (números o null), op1, op2 (≤, ≥, = o cadena vacía).
+Representa únicamente variables y restricciones que aparecen en el enunciado.
+Se permiten una o más restricciones; para este analizador solo prepara automáticamente
+modelos de dos variables. No inventes una segunda restricción.
+
+Para transporte, datos debe incluir oferta (lista numérica o vacía), demanda
+(lista numérica o vacía), matriz_costos (lista de listas numéricas o vacía),
+origenes (lista de nombres o vacía), destinos (lista de nombres o vacía).
+Conserva el orden de filas y columnas si está claro en el texto.
+
+Para asignacion, datos debe incluir matriz_costos (lista de listas numéricas o vacía),
+agentes (lista de nombres o vacía), tareas (lista de nombres o vacía), y
+tipo_asignacion (minimizar, maximizar o cadena vacía).
+
+Para inventarios, datos debe incluir modelo (EOQ, punto_reorden, otro o cadena vacía),
+demanda_anual, costo_pedido, costo_mantenimiento, costo_unidad, demanda_diaria,
+plazo_entrega, inventario_seguridad (números o null).
+
+Para colas, datos debe incluir tasa_llegada, tasa_servicio, numero_servidores
+(números o null) y disciplina (cadena).
+Para pert_cpm, datos debe incluir actividades (lista de objetos con actividad,
+predecesoras y duracion si se proporciona; si no, lista vacía).
+Para otro o no_identificado, datos debe contener un resumen breve y los datos
+que realmente se mencionen, sin forzarlos a otra categoría.
+
+Indica en faltantes únicamente los datos esenciales que el enunciado menciona
+o requiere pero no proporciona. No marques como faltante un dato opcional.
 Responde en español.
 """
             with st.spinner("Analizando el enunciado..."):
@@ -893,10 +923,10 @@ Responde en español.
                     if (
                         modelo_ia.get("tipo") == "programacion_lineal"
                         and all(
-                            modelo_ia.get(campo) is None
+                            (modelo_ia.get("datos") or modelo_ia).get(campo) is None
                             for campo in ["a2", "b2", "d2"]
                         )
-                        and modelo_ia.get("op2") in [None, ""]
+                        and (modelo_ia.get("datos") or modelo_ia).get("op2") in [None, ""]
                     ):
                         modelo_ia["faltantes"] = [
                             dato for dato in (modelo_ia.get("faltantes") or [])
@@ -917,8 +947,8 @@ Responde en español.
         # anterior en la sesión o el modelo incluye variantes del texto.
         if (
             str(modelo_ia.get("tipo", "")).strip().lower() == "programacion_lineal"
-            and all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
-            and modelo_ia.get("op2") in [None, ""]
+            and all((modelo_ia.get("datos") or modelo_ia).get(campo) is None for campo in ["a2", "b2", "d2"])
+            and (modelo_ia.get("datos") or modelo_ia).get("op2") in [None, ""]
         ):
             # En programación lineal, la segunda restricción es opcional.
             # No dejar que el texto generado por el modelo IA la convierta
@@ -938,33 +968,54 @@ Responde en español.
         faltantes = modelo_ia.get("faltantes") or []
         if faltantes:
             st.warning("Datos faltantes o por confirmar: " + "; ".join(map(str, faltantes)))
-        if modelo_ia.get("tipo") == "programacion_lineal":
+        tipo_detectado = str(modelo_ia.get("tipo", "no_identificado"))
+        datos_ia = modelo_ia.get("datos") or {}
+
+        if tipo_detectado == "programacion_lineal":
+            # Compatibilidad con resultados del formato anterior.
+            if not datos_ia:
+                datos_ia = {
+                    campo: modelo_ia.get(campo)
+                    for campo in ["cx", "cy", "a1", "b1", "d1", "a2", "b2", "d2", "op1", "op2"]
+                }
+                datos_ia["objetivo"] = modelo_ia.get("objetivo")
             campos = ["objetivo", "cx", "cy", "a1", "b1", "op1", "d1", "a2", "b2", "op2", "d2"]
             st.write("**Datos extraídos. Revísalos antes de resolver:**")
-            st.json({campo: modelo_ia.get(campo) for campo in campos})
+            st.json({campo: datos_ia.get(campo) for campo in campos})
             requeridos = ["cx", "cy", "a1", "b1", "d1"]
             tiene_r2 = all(
-                modelo_ia.get(campo) is not None
+                datos_ia.get(campo) is not None
                 for campo in ["a2", "b2", "d2"]
-            ) and modelo_ia.get("op2") in ["≤", "≥", "="]
+            ) and datos_ia.get("op2") in ["≤", "≥", "="]
             sin_r2 = (
-                all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
-                and modelo_ia.get("op2") in [None, ""]
+                all(datos_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
+                and datos_ia.get("op2") in [None, ""]
             )
             completo = (
-                all(modelo_ia.get(campo) is not None for campo in requeridos)
-                and modelo_ia.get("objetivo") in ["Maximizar", "Minimizar"]
-                and modelo_ia.get("op1") in ["≤", "≥", "="]
+                all(datos_ia.get(campo) is not None for campo in requeridos)
+                and datos_ia.get("objetivo") in ["Maximizar", "Minimizar"]
+                and datos_ia.get("op1") in ["≤", "≥", "="]
                 and (tiene_r2 or sin_r2)
             )
             if completo:
                 if st.button("Preparar campos de Programación lineal", type="primary"):
-                    st.session_state["ia_lp_pendiente"] = modelo_ia
+                    modelo_para_cargar = dict(datos_ia)
+                    modelo_para_cargar["tipo"] = "programacion_lineal"
+                    st.session_state["ia_lp_pendiente"] = modelo_para_cargar
                     st.success("Datos preparados. Abre Programación lineal en el menú para cargarlos y revisarlos.")
             else:
                 st.warning("El modelo está incompleto. Completa los campos faltantes manualmente.")
-        elif modelo_ia.get("tipo") in ["transporte", "asignacion", "inventarios", "simplex"]:
-            st.warning("Se identificó el tipo de problema, pero el llenado automático de este módulo se añadirá en una siguiente etapa. Por ahora, introduce los datos manualmente.")
+        elif tipo_detectado in ["transporte", "asignacion", "inventarios", "simplex", "metodo_grafico", "colas", "pert_cpm"]:
+            st.write("**Datos específicos identificados:**")
+            st.json(datos_ia)
+            st.info(
+                "El analizador ya reconoce y organiza los datos de este tipo de problema. "
+                "La carga directa en el formulario y la resolución automática dependen "
+                "de que el módulo tenga un importador compatible; por ahora revisa estos "
+                "datos y completa el módulo correspondiente manualmente."
+            )
+        else:
+            st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
         else:
             st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
 
