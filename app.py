@@ -1322,6 +1322,13 @@ elif modulo == "Método Simplex":
         "Resuelve problemas de maximización con dos variables y "
         "restricciones de tipo ≤."
     )
+    st.info(
+        "Alcance de esta versión: los coeficientes de la función objetivo "
+        "y los lados derechos deben ser no negativos; los coeficientes "
+        "de las restricciones también deben ser no negativos. Para modelos "
+        "con restricciones ≥ o =, minimización o coeficientes negativos, "
+        "utiliza Programación lineal."
+    )
 
     st.latex(r"\text{Maximizar } Z=c_1x+c_2y")
 
