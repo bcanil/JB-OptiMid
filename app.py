@@ -900,6 +900,18 @@ Responde en español.
         st.markdown("#### Resultado del análisis")
         st.info("Tipo detectado: " + str(modelo_ia.get("tipo", "no_identificado")))
         st.write(modelo_ia.get("explicacion", ""))
+        # Aplicar también al mostrar el resultado, por si quedó un análisis
+        # anterior en la sesión o el modelo incluye variantes del texto.
+        if (
+            str(modelo_ia.get("tipo", "")).strip().lower() == "programacion_lineal"
+            and all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
+            and modelo_ia.get("op2") in [None, ""]
+        ):
+            modelo_ia["faltantes"] = [
+                dato for dato in (modelo_ia.get("faltantes") or [])
+                if "segunda restricción" not in str(dato).lower()
+                and "segunda restriccion" not in str(dato).lower()
+            ]
         faltantes = modelo_ia.get("faltantes") or []
         if faltantes:
             st.warning("Datos faltantes o por confirmar: " + "; ".join(map(str, faltantes)))
