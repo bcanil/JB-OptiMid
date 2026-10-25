@@ -715,6 +715,19 @@ def _consultar_gemini(instrucciones, mensaje, json_mode=False):
         return respuesta.text, None
     except Exception as error:
         detalle = str(error)[:200]
+        detalle_mayusculas = detalle.upper()
+
+        # Gemini puede devolver 503 cuando el modelo está temporalmente saturado.
+        if "503" in detalle_mayusculas and (
+            "UNAVAILABLE" in detalle_mayusculas
+            or "HIGH DEMAND" in detalle_mayusculas
+        ):
+            return None, (
+                "Gemini está temporalmente saturado y no puede atender la "
+                "solicitud en este momento. Por favor, vuelve a intentarlo "
+                "dentro de unos minutos."
+            )
+
         return None, (
             "No se pudo consultar Gemini. Verifica la clave, conexión y límites "
             "gratuitos. Detalle: " + detalle
