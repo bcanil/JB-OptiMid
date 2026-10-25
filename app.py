@@ -907,10 +907,20 @@ Responde en español.
             and all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
             and modelo_ia.get("op2") in [None, ""]
         ):
+            # En programación lineal, la segunda restricción es opcional.
+            # No dejar que el texto generado por el modelo IA la convierta
+            # en un requisito cuando todos sus campos están vacíos.
+            palabras_opcionales = (
+                "segunda restricción", "segunda restriccion",
+                "restricción adicional", "restriccion adicional",
+                "recurso adicional", "condición adicional", "condicion adicional",
+            )
             modelo_ia["faltantes"] = [
                 dato for dato in (modelo_ia.get("faltantes") or [])
-                if "segunda restricción" not in str(dato).lower()
-                and "segunda restriccion" not in str(dato).lower()
+                if not any(
+                    frase in str(dato).casefold()
+                    for frase in palabras_opcionales
+                )
             ]
         faltantes = modelo_ia.get("faltantes") or []
         if faltantes:
