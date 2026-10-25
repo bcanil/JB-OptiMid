@@ -1,0 +1,14 @@
+# Entorno virtual de Python
+.venv/
+venv/
+
+# Archivos generados por Python
+__pycache__/
+*.py[cod]
+
+# Secretos locales de Streamlit (no subir claves API)
+.streamlit/secrets.toml
+
+# Variables de entorno locales
+.env
+.env.*
