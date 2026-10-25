@@ -1010,12 +1010,61 @@ Responde en español.
         elif tipo_detectado in ["transporte", "asignacion", "inventarios", "simplex", "metodo_grafico", "colas", "pert_cpm"]:
             st.write("**Datos específicos identificados:**")
             st.json(datos_ia)
-            st.info(
-                "El analizador ya reconoce y organiza los datos de este tipo de problema. "
-                "La carga directa en el formulario y la resolución automática dependen "
-                "de que el módulo tenga un importador compatible; por ahora revisa estos "
-                "datos y completa el módulo correspondiente manualmente."
-            )
+            if tipo_detectado == "transporte":
+                matriz = datos_ia.get("matriz_costos") or []
+                oferta = datos_ia.get("oferta") or []
+                demanda = datos_ia.get("demanda") or []
+                dimensiones_ok = (
+                    isinstance(matriz, list) and 2 <= len(matriz) <= 5
+                    and all(isinstance(fila, list) and len(fila) == len(matriz[0]) for fila in matriz)
+                    and 2 <= len(matriz[0]) <= 5
+                    and len(oferta) == len(matriz) and len(demanda) == len(matriz[0])
+                ) if matriz and isinstance(matriz[0], list) else False
+                try:
+                    valores_ok = dimensiones_ok and all(
+                        v is not None and np.isfinite(float(v)) and float(v) >= 0
+                        for fila in matriz for v in fila
+                    ) and all(v is not None and np.isfinite(float(v)) and float(v) >= 0 for v in oferta + demanda)
+                except (TypeError, ValueError):
+                    valores_ok = False
+                if valores_ok:
+                    st.caption("Confirma que la oferta total sea igual a la demanda total.")
+                    if st.button("Preparar formulario de Transporte", type="primary", key="ia_preparar_transporte"):
+                        st.session_state["ia_transporte_pendiente"] = {"matriz_costos": matriz, "oferta": oferta, "demanda": demanda}
+                        st.success("Datos preparados. Abre Transporte y asignación, selecciona Transporte y revisa los campos.")
+                else:
+                    st.warning("Se necesita una matriz rectangular completa (2–5 filas y columnas), oferta y demanda completas y valores no negativos.")
+            elif tipo_detectado == "asignacion":
+                matriz = datos_ia.get("matriz_costos") or []
+                try:
+                    matriz_ok = isinstance(matriz, list) and 2 <= len(matriz) <= 6 and all(isinstance(fila, list) and len(fila) == len(matriz) for fila in matriz) and all(v is not None and np.isfinite(float(v)) and float(v) >= 0 for fila in matriz for v in fila)
+                except (TypeError, ValueError):
+                    matriz_ok = False
+                if matriz_ok:
+                    if st.button("Preparar formulario de Asignación", type="primary", key="ia_preparar_asignacion"):
+                        st.session_state["ia_asignacion_pendiente"] = {"matriz_costos": matriz}
+                        st.success("Datos preparados. Abre Transporte y asignación, selecciona Asignación y revisa los campos.")
+                else:
+                    st.warning("Se necesita una matriz cuadrada completa de costos (2–6 × 2–6), con valores no negativos.")
+            elif tipo_detectado == "inventarios":
+                modelo = str(datos_ia.get("modelo") or "").strip().casefold()
+                campos_eoq = ["demanda_anual", "costo_pedido", "costo_mantenimiento"]
+                campos_rop = ["demanda_diaria", "plazo_entrega", "inventario_seguridad"]
+                campos = campos_eoq if modelo == "eoq" else campos_rop if modelo in ["punto_reorden", "rop"] else []
+                try:
+                    completo = bool(campos) and all(datos_ia.get(c) is not None and np.isfinite(float(datos_ia[c])) and float(datos_ia[c]) >= 0 for c in campos)
+                    if completo and modelo == "eoq":
+                        completo = all(float(datos_ia[c]) > 0 for c in campos_eoq)
+                except (TypeError, ValueError):
+                    completo = False
+                if completo:
+                    if st.button("Preparar formulario de Inventarios", type="primary", key="ia_preparar_inventarios"):
+                        st.session_state["ia_inventarios_pendiente"] = {"modelo": modelo, **{c: datos_ia.get(c) for c in campos_eoq + campos_rop + ["costo_unidad"]}}
+                        st.success("Datos preparados. Abre Inventarios y revisa los campos antes de calcular.")
+                else:
+                    st.warning("La IA debe detectar EOQ o punto de reorden con todos los datos esenciales para preparar el formulario.")
+            else:
+                st.info("Este tipo de problema todavía no tiene importador directo. Puedes revisar los datos detectados y completar el módulo manualmente.")
         else:
             st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
 
@@ -1565,10 +1614,35 @@ elif modulo == "Método Simplex":
 
 elif modulo == "Transporte y asignación":
     st.header("Transporte y asignación")
+    pendiente_trans = st.session_state.get("ia_transporte_pendiente")
+    pendiente_asig = st.session_state.get("ia_asignacion_pendiente")
+    if pendiente_trans:
+        st.session_state["tipo_problema_transporte"] = "Transporte"
+        st.session_state["trans_origenes"] = len(pendiente_trans["matriz_costos"])
+        st.session_state["trans_destinos"] = len(pendiente_trans["matriz_costos"][0])
+        for i, fila in enumerate(pendiente_trans["matriz_costos"]):
+            for j, valor in enumerate(fila):
+                st.session_state[f"trans_costo_{i}_{j}"] = float(valor)
+        for i, valor in enumerate(pendiente_trans["oferta"]):
+            st.session_state[f"trans_oferta_{i}"] = float(valor)
+        for j, valor in enumerate(pendiente_trans["demanda"]):
+            st.session_state[f"trans_demanda_{j}"] = float(valor)
+        st.session_state["ia_transporte_pendiente"] = None
+        st.success("Datos del analizador cargados. Verifica el balance antes de resolver.")
+    if pendiente_asig:
+        st.session_state["tipo_problema_transporte"] = "Asignación"
+        n = len(pendiente_asig["matriz_costos"])
+        st.session_state["asig_cantidad"] = n
+        for i, fila in enumerate(pendiente_asig["matriz_costos"]):
+            for j, valor in enumerate(fila):
+                st.session_state[f"asig_costo_{i}_{j}"] = float(valor)
+        st.session_state["ia_asignacion_pendiente"] = None
+        st.success("Matriz de asignación cargada. Revísala antes de resolver.")
     tipo_problema = st.radio(
         "Selecciona el tipo de problema:",
         ["Transporte", "Asignación"],
-        horizontal=True
+        horizontal=True,
+        key="tipo_problema_transporte"
     )
 
     if tipo_problema == "Transporte":
@@ -1796,6 +1870,22 @@ elif modulo == "Inventarios":
         "reorden mediante modelos clásicos de Investigación de Operaciones."
     )
 
+    pendiente_inv = st.session_state.get("ia_inventarios_pendiente")
+    if pendiente_inv:
+        if pendiente_inv.get("modelo") == "eoq":
+            st.session_state["inventario_tipo"] = "Cantidad económica de pedido (EOQ)"
+            for clave, campo in [("eoq_demanda", "demanda_anual"), ("eoq_costo_pedido", "costo_pedido"), ("eoq_mantenimiento", "costo_mantenimiento"), ("eoq_costo_unidad", "costo_unidad")]:
+                valor = pendiente_inv.get(campo)
+                if valor is not None:
+                    st.session_state[clave] = float(valor)
+        elif pendiente_inv.get("modelo") in ["punto_reorden", "rop"]:
+            st.session_state["inventario_tipo"] = "Punto de reorden (ROP)"
+            for clave, campo in [("rop_demanda", "demanda_diaria"), ("rop_entrega", "plazo_entrega"), ("rop_seguridad", "inventario_seguridad")]:
+                valor = pendiente_inv.get(campo)
+                if valor is not None:
+                    st.session_state[clave] = float(valor)
+        st.session_state["ia_inventarios_pendiente"] = None
+        st.success("Datos del analizador cargados. Revísalos antes de calcular.")
     tipo_inventario = st.radio(
         "Selecciona una herramienta:",
         ["Cantidad económica de pedido (EOQ)", "Punto de reorden (ROP)"],
