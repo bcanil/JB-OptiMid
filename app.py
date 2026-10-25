@@ -2135,7 +2135,7 @@ elif modulo == "Modelación":
             st.write(
                 f"El objetivo es {objetivo_modelo.lower()} el valor de Z, "
                 f"calculado a partir de los coeficientes {coef_obj_x:g} "
-                f"y {coef_obj_y:g}. Las dos restricciones representan "
+                f"y {coef_obj_y:g}. Las restricciones representan "
                 "los límites de los recursos o condiciones del problema."
             )
 
