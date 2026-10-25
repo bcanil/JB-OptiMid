@@ -1068,34 +1068,6 @@ Responde en español.
         else:
             st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
 
-    with st.expander("🛠️ Preparar ejemplos sin IA (útil cuando se agota la cuota)"):
-        st.write("Estos ejemplos cargan datos conocidos directamente en los módulos, sin llamar a Gemini. Revísalos antes de calcular.")
-        col_eoq, col_rop = st.columns(2)
-        with col_eoq:
-            st.markdown("**Inventarios — EOQ**")
-            st.caption("D = 1200 unidades/año · S = 50 por pedido · H = 4 por unidad/año")
-            if st.button("Cargar ejemplo EOQ", key="fallback_ejemplo_eoq"):
-                st.session_state["ia_inventarios_pendiente"] = {"modelo": "eoq", "demanda_anual": 1200.0, "costo_pedido": 50.0, "costo_mantenimiento": 4.0, "costo_unidad": None, "demanda_diaria": None, "plazo_entrega": None, "inventario_seguridad": None}
-                st.success("Ejemplo EOQ preparado. Abre Inventarios y revisa los datos.")
-        with col_rop:
-            st.markdown("**Inventarios — Punto de reorden**")
-            st.caption("Demanda diaria = 20 · entrega = 5 días · seguridad = 10")
-            if st.button("Cargar ejemplo de reorden", key="fallback_ejemplo_rop"):
-                st.session_state["ia_inventarios_pendiente"] = {"modelo": "punto_reorden", "demanda_diaria": 20.0, "plazo_entrega": 5.0, "inventario_seguridad": 10.0, "demanda_anual": None, "costo_pedido": None, "costo_mantenimiento": None, "costo_unidad": None}
-                st.success("Ejemplo de punto de reorden preparado. Abre Inventarios y revisa los datos.")
-        col_trans, col_asig = st.columns(2)
-        with col_trans:
-            st.markdown("**Transporte**")
-            st.caption("Costos [[2, 3], [4, 1]] · oferta [20, 30] · demanda [25, 25]")
-            if st.button("Cargar ejemplo de Transporte", key="fallback_ejemplo_trans"):
-                st.session_state["ia_transporte_pendiente"] = {"matriz_costos": [[2.0, 3.0], [4.0, 1.0]], "oferta": [20.0, 30.0], "demanda": [25.0, 25.0]}
-                st.success("Ejemplo de Transporte preparado. Abre Transporte y asignación, selecciona Transporte y revisa los datos.")
-        with col_asig:
-            st.markdown("**Asignación**")
-            st.caption("Matriz de costos [[8, 3], [2, 7]]")
-            if st.button("Cargar ejemplo de Asignación", key="fallback_ejemplo_asig"):
-                st.session_state["ia_asignacion_pendiente"] = {"matriz_costos": [[8.0, 3.0], [2.0, 7.0]]}
-                st.success("Ejemplo de Asignación preparado. Abre Transporte y asignación, selecciona Asignación y revisa los datos.")
     st.markdown("""
     <div style="
         background: linear-gradient(110deg, #e4f3ff, #e7fbfa);
