@@ -875,6 +875,21 @@ Responde en español.
             else:
                 try:
                     modelo_ia = json.loads(resultado_ia)
+                    # Una segunda restricción ausente no es un dato faltante
+                    # cuando el enunciado solo contiene una.
+                    if (
+                        modelo_ia.get("tipo") == "programacion_lineal"
+                        and all(
+                            modelo_ia.get(campo) is None
+                            for campo in ["a2", "b2", "d2"]
+                        )
+                        and modelo_ia.get("op2") in [None, ""]
+                    ):
+                        modelo_ia["faltantes"] = [
+                            dato for dato in (modelo_ia.get("faltantes") or [])
+                            if "segunda restricción" not in str(dato).lower()
+                            and "segunda restriccion" not in str(dato).lower()
+                        ]
                     st.session_state["modelo_ia_preparado"] = modelo_ia
                     st.session_state["enunciado_ia_original"] = enunciado
                 except (ValueError, TypeError):
