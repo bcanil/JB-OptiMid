@@ -1,6 +1,8 @@
 
 import streamlit as st
 import numpy as np
+import json
+
 import plotly.graph_objects as go
 from scipy.optimize import linprog
 from scipy.optimize import linear_sum_assignment
@@ -444,7 +446,10 @@ def mostrar_grafica(
     valores_x = [0.0, x_opt]
     valores_y = [0.0, y_opt]
 
-    for a, b, d in [(a1, b1, d1), (a2, b2, d2)]:
+    restricciones_rango = [(a1, b1, d1)]
+    if not (a2 == 0 and b2 == 0):
+        restricciones_rango.append((a2, b2, d2))
+    for a, b, d in restricciones_rango:
         if a != 0:
             valores_x.append(abs(d / a))
         if b != 0:
@@ -465,12 +470,9 @@ def mostrar_grafica(
             return expresion >= d - 1e-9
         return np.abs(expresion - d) <= 1e-3
 
-    factible = (
-        cumple(X, Y, a1, b1, d1, op1)
-        & cumple(X, Y, a2, b2, d2, op2)
-        & (X >= 0)
-        & (Y >= 0)
-    )
+    factible = cumple(X, Y, a1, b1, d1, op1) & (X >= 0) & (Y >= 0)
+    if not (a2 == 0 and b2 == 0):
+        factible &= cumple(X, Y, a2, b2, d2, op2)
 
     fig = go.Figure()
 
@@ -489,10 +491,10 @@ def mostrar_grafica(
         ))
 
     # Dibujar las rectas de las restricciones
-    for a, b, d, operador, nombre in [
-        (a1, b1, d1, op1, "Restricción 1"),
-        (a2, b2, d2, op2, "Restricción 2")
-    ]:
+    restricciones_grafica = [(a1, b1, d1, op1, "Restricción 1")]
+    if not (a2 == 0 and b2 == 0):
+        restricciones_grafica.append((a2, b2, d2, op2, "Restricción 2"))
+    for a, b, d, operador, nombre in restricciones_grafica:
         if b != 0:
             y_recta = (d - a * xs) / b
             fig.add_trace(go.Scatter(
@@ -618,10 +620,9 @@ def resolver_simplex(c1, c2, a1, b1, d1, a2, b2, d2):
 def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
     candidatos = [(0.0, 0.0)]
 
-    restricciones = [
-        (a1, b1, d1),
-        (a2, b2, d2)
-    ]
+    restricciones = [(a1, b1, d1)]
+    if not (a2 == 0 and b2 == 0):
+        restricciones.append((a2, b2, d2))
 
     # Intersecciones de cada recta con los ejes
     for a, b, d in restricciones:
@@ -656,7 +657,7 @@ def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
         if not cumple(a1 * x + b1 * y, op1, d1):
             continue
 
-        if not cumple(a2 * x + b2 * y, op2, d2):
+        if not (a2 == 0 and b2 == 0) and not cumple(a2 * x + b2 * y, op2, d2):
             continue
 
         punto = (max(0.0, x), max(0.0, y))
@@ -669,6 +670,108 @@ def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
             vertices.append(punto)
 
     return sorted(vertices)
+
+
+
+# ============================================================
+# ASISTENTE IA — requiere GEMINI_API_KEY en Streamlit Secrets
+# ============================================================
+def _cliente_gemini():
+    """Crea el cliente Gemini usando únicamente el secreto configurado."""
+    try:
+        clave = st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:
+        clave = ""
+    if not clave:
+        return None
+    try:
+        from google import genai
+        return genai.Client(api_key=clave)
+    except ImportError:
+        return None
+
+
+def _consultar_gemini(instrucciones, mensaje, json_mode=False):
+    cliente = _cliente_gemini()
+    if cliente is None:
+        return None, (
+            "El asistente IA no está configurado. Agrega GEMINI_API_KEY "
+            "a los Secrets de Streamlit e instala google-genai en requirements.txt."
+        )
+    try:
+        from google.genai import types
+        configuracion = types.GenerateContentConfig(
+            system_instruction=instrucciones,
+            temperature=0.1,
+            response_mime_type="application/json" if json_mode else "text/plain"
+        )
+        respuesta = cliente.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=mensaje,
+            config=configuracion
+        )
+        if not respuesta.text:
+            return None, "Gemini no devolvió texto. Intenta reformular la pregunta."
+        return respuesta.text, None
+    except Exception as error:
+        detalle = str(error)[:200]
+        detalle_mayusculas = detalle.upper()
+
+        # Gemini puede devolver 503 cuando el modelo está temporalmente saturado.
+        if "503" in detalle_mayusculas and (
+            "UNAVAILABLE" in detalle_mayusculas
+            or "HIGH DEMAND" in detalle_mayusculas
+        ):
+            return None, (
+                "Gemini está temporalmente saturado y no puede atender la "
+                "solicitud en este momento. Por favor, vuelve a intentarlo "
+                "dentro de unos minutos."
+            )
+
+        return None, (
+            "No se pudo consultar Gemini. Verifica la clave, conexión y límites "
+            "gratuitos. Detalle: " + detalle
+        )
+
+
+def mostrar_tutor_ia(modulo_actual):
+    """Tutor restringido al contenido académico de JB OptiMid."""
+    st.divider()
+    st.subheader("🤖 Pregunta al tutor de JB OptiMid")
+    st.caption(
+        "Haz preguntas sobre Investigación de Operaciones y el módulo actual. "
+        "Las respuestas de IA pueden contener errores; verifica los cálculos."
+    )
+    clave = "tutor_ia_" + modulo_actual.replace(" ", "_").replace("ó", "o").replace("í", "i")
+    with st.form("form_" + clave):
+        pregunta = st.text_area(
+            "¿Qué deseas comprender?",
+            placeholder="Ej. ¿Cómo se interpreta la región factible?",
+            max_chars=1500,
+            key=clave
+        )
+        enviar = st.form_submit_button("Consultar al tutor", type="primary")
+    if enviar:
+        if not pregunta.strip():
+            st.warning("Escribe una pregunta antes de consultar.")
+            return
+        instrucciones = (
+            "Eres el tutor académico de JB OptiMid, una aplicación universitaria "
+            "de Investigación de Operaciones. Responde en español, de forma clara "
+            "y didáctica. El módulo actual es: " + modulo_actual + ". Limita la "
+            "respuesta a Investigación de Operaciones, matemáticas relacionadas "
+            "y al uso educativo del módulo. Si la pregunta es ajena a esos temas, "
+            "indica amablemente que no puedes ayudar con ella. No afirmes haber "
+            "ejecutado la aplicación. Si faltan datos para calcular, dilo."
+        )
+        with st.spinner("El tutor está preparando una respuesta..."):
+            respuesta, error = _consultar_gemini(instrucciones, pregunta)
+        if error:
+            st.warning(error)
+        elif respuesta:
+            st.markdown("**Respuesta del tutor**")
+            st.markdown(respuesta)
+
 
 
 if modulo == "Inicio":
@@ -742,6 +845,129 @@ if modulo == "Inicio":
         "el procedimiento antes de interpretar el resultado."
     )
 
+    st.subheader("✨ Analiza un enunciado con IA")
+    st.write(
+        "Describe el problema con tus palabras. En esta primera versión, "
+        "la preparación automática se habilita para programación lineal de "
+        "dos variables; otros tipos se identificarán para su integración posterior."
+    )
+    with st.form("form_analizador_ia"):
+        enunciado = st.text_area(
+            "Enunciado del problema",
+            placeholder="Ej. Una empresa fabrica dos productos...",
+            max_chars=5000,
+            key="enunciado_analizador_ia"
+        )
+        analizar = st.form_submit_button("Analizar enunciado", type="primary")
+    if analizar:
+        if not enunciado.strip():
+            st.warning("Escribe un enunciado antes de analizarlo.")
+        else:
+            instrucciones = """
+Analiza problemas de Investigación de Operaciones y devuelve SOLO JSON válido.
+Esquema: tipo (programacion_lineal, transporte, asignacion, inventarios,
+simplex, no_identificado), objetivo (Maximizar, Minimizar o cadena vacía),
+cx, cy, a1, b1, d1, a2, b2, d2 (números o null), op1, op2 (≤, ≥, = o cadena
+vacía), explicacion (cadena), faltantes (lista de cadenas), confianza
+(alta, media o baja). Nunca inventes valores. Usa null para datos ausentes.
+Interpreta programación lineal de dos variables con una o más restricciones.
+Extrae únicamente las restricciones que estén explícitas en el enunciado.
+Si solo existe una restricción, deja a2, b2, d2 como null y op2 como cadena vacía;
+no inventes una segunda restricción. Si no se especifica ninguna otra condición,
+no la marques como dato faltante. Si faltan datos esenciales de una restricción
+mencionada, indícalos en faltantes. Si el problema es transporte, asignación o
+inventarios, clasifícalo sin forzar los datos al modelo de programación lineal.
+Responde en español.
+"""
+            with st.spinner("Analizando el enunciado..."):
+                resultado_ia, error_ia = _consultar_gemini(
+                    instrucciones, enunciado, json_mode=True
+                )
+            if error_ia:
+                st.warning(error_ia)
+            else:
+                try:
+                    modelo_ia = json.loads(resultado_ia)
+                    # Una segunda restricción ausente no es un dato faltante
+                    # cuando el enunciado solo contiene una.
+                    if (
+                        modelo_ia.get("tipo") == "programacion_lineal"
+                        and all(
+                            modelo_ia.get(campo) is None
+                            for campo in ["a2", "b2", "d2"]
+                        )
+                        and modelo_ia.get("op2") in [None, ""]
+                    ):
+                        modelo_ia["faltantes"] = [
+                            dato for dato in (modelo_ia.get("faltantes") or [])
+                            if "segunda restricción" not in str(dato).lower()
+                            and "segunda restriccion" not in str(dato).lower()
+                        ]
+                    st.session_state["modelo_ia_preparado"] = modelo_ia
+                    st.session_state["enunciado_ia_original"] = enunciado
+                except (ValueError, TypeError):
+                    st.error("La IA no devolvió un modelo válido. Intenta reformular el enunciado.")
+
+    modelo_ia = st.session_state.get("modelo_ia_preparado")
+    if modelo_ia:
+        st.markdown("#### Resultado del análisis")
+        st.info("Tipo detectado: " + str(modelo_ia.get("tipo", "no_identificado")))
+        st.write(modelo_ia.get("explicacion", ""))
+        # Aplicar también al mostrar el resultado, por si quedó un análisis
+        # anterior en la sesión o el modelo incluye variantes del texto.
+        if (
+            str(modelo_ia.get("tipo", "")).strip().lower() == "programacion_lineal"
+            and all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
+            and modelo_ia.get("op2") in [None, ""]
+        ):
+            # En programación lineal, la segunda restricción es opcional.
+            # No dejar que el texto generado por el modelo IA la convierta
+            # en un requisito cuando todos sus campos están vacíos.
+            palabras_opcionales = (
+                "segunda restricción", "segunda restriccion",
+                "restricción adicional", "restriccion adicional",
+                "recurso adicional", "condición adicional", "condicion adicional",
+            )
+            modelo_ia["faltantes"] = [
+                dato for dato in (modelo_ia.get("faltantes") or [])
+                if not any(
+                    frase in str(dato).casefold()
+                    for frase in palabras_opcionales
+                )
+            ]
+        faltantes = modelo_ia.get("faltantes") or []
+        if faltantes:
+            st.warning("Datos faltantes o por confirmar: " + "; ".join(map(str, faltantes)))
+        if modelo_ia.get("tipo") == "programacion_lineal":
+            campos = ["objetivo", "cx", "cy", "a1", "b1", "op1", "d1", "a2", "b2", "op2", "d2"]
+            st.write("**Datos extraídos. Revísalos antes de resolver:**")
+            st.json({campo: modelo_ia.get(campo) for campo in campos})
+            requeridos = ["cx", "cy", "a1", "b1", "d1"]
+            tiene_r2 = all(
+                modelo_ia.get(campo) is not None
+                for campo in ["a2", "b2", "d2"]
+            ) and modelo_ia.get("op2") in ["≤", "≥", "="]
+            sin_r2 = (
+                all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
+                and modelo_ia.get("op2") in [None, ""]
+            )
+            completo = (
+                all(modelo_ia.get(campo) is not None for campo in requeridos)
+                and modelo_ia.get("objetivo") in ["Maximizar", "Minimizar"]
+                and modelo_ia.get("op1") in ["≤", "≥", "="]
+                and (tiene_r2 or sin_r2)
+            )
+            if completo:
+                if st.button("Preparar campos de Programación lineal", type="primary"):
+                    st.session_state["ia_lp_pendiente"] = modelo_ia
+                    st.success("Datos preparados. Abre Programación lineal en el menú para cargarlos y revisarlos.")
+            else:
+                st.warning("El modelo está incompleto. Completa los campos faltantes manualmente.")
+        elif modelo_ia.get("tipo") in ["transporte", "asignacion", "inventarios", "simplex"]:
+            st.warning("Se identificó el tipo de problema, pero el llenado automático de este módulo se añadirá en una siguiente etapa. Por ahora, introduce los datos manualmente.")
+        else:
+            st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
+
     st.markdown("""
     <div style="
         background: linear-gradient(110deg, #e4f3ff, #e7fbfa);
@@ -762,55 +988,87 @@ if modulo == "Inicio":
 
 
 elif modulo in ["Programación lineal", "Método gráfico"]:
+    pendiente_ia = st.session_state.get("ia_lp_pendiente")
+    if pendiente_ia and modulo == "Programación lineal":
+        tiene_r2_pendiente = (
+            all(pendiente_ia.get(campo) is not None for campo in ["a2", "b2", "d2"])
+            and pendiente_ia.get("op2") in ["≤", "≥", "="]
+        )
+        # Reemplazar todos los campos, incluso cuando la IA no detectó R2.
+        # Así no quedan valores antiguos o predeterminados de otra sesión.
+        mapa_campos = {
+            "lp_objetivo": pendiente_ia.get("objetivo", "Maximizar"),
+            "lp_cx": float(pendiente_ia.get("cx") or 0),
+            "lp_cy": float(pendiente_ia.get("cy") or 0),
+            "lp_a1": float(pendiente_ia.get("a1") or 0),
+            "lp_b1": float(pendiente_ia.get("b1") or 0),
+            "lp_d1": float(pendiente_ia.get("d1") or 0),
+            "lp_a2": float(pendiente_ia.get("a2") or 0),
+            "lp_b2": float(pendiente_ia.get("b2") or 0),
+            "lp_d2": float(pendiente_ia.get("d2") or 0),
+            "lp_op1": pendiente_ia.get("op1") or "≤",
+            "lp_op2": pendiente_ia.get("op2") if tiene_r2_pendiente else "≤",
+            "lp_usar_r2": tiene_r2_pendiente
+        }
+        for clave, valor in mapa_campos.items():
+            st.session_state[clave] = valor
+        st.session_state["ia_lp_pendiente"] = None
+        st.success("Los datos del enunciado se cargaron en los campos. Revísalos y pulsa Resolver problema cuando estés listo.")
     st.header("🧮 " + modulo)
 
     st.write(
-        "Introduce los coeficientes de tu problema. Esta versión "
-        "trabaja con dos variables y dos restricciones de tipo ≤."
+        "Introduce los coeficientes de la función objetivo y las restricciones "
+        "que realmente aparecen en el enunciado. Puedes usar una o dos restricciones."
     )
 
     objetivo = st.selectbox(
         "¿Qué deseas hacer?",
-        ["Maximizar", "Minimizar"]
+        ["Maximizar", "Minimizar"],
+        key="lp_objetivo"
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
-        cx = st.number_input("Coeficiente de x en Z", value=40.0)
+        cx = st.number_input("Coeficiente de x en Z", value=40.0, key="lp_cx")
     with col2:
-        cy = st.number_input("Coeficiente de y en Z", value=30.0)
+        cy = st.number_input("Coeficiente de y en Z", value=30.0, key="lp_cy")
 
     st.subheader("Restricciones")
+    usar_r2 = st.checkbox(
+        "Este problema tiene una segunda restricción",
+        key="lp_usar_r2",
+        help="Actívala solo si el enunciado incluye otra condición."
+    )
 
-    col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
-
+    col1, col2, col3 = st.columns([2, 2, 2])
     with col1:
-        a1 = st.number_input("R1: coeficiente de x", value=2.0)
-        a2 = st.number_input("R2: coeficiente de x", value=1.0)
-
+        a1 = st.number_input("R1: coeficiente de x", value=2.0, key="lp_a1")
     with col2:
-        b1 = st.number_input("R1: coeficiente de y", value=1.0)
-        b2 = st.number_input("R2: coeficiente de y", value=2.0)
-
+        b1 = st.number_input("R1: coeficiente de y", value=1.0, key="lp_b1")
     with col3:
-        op1 = st.selectbox(
-            "Operador R1", ["≤", "≥", "="], key="operador_r1"
-        )
-        op2 = st.selectbox(
-            "Operador R2", ["≤", "≥", "="], key="operador_r2"
-        )
+        d1 = st.number_input("R1: límite", value=100.0, key="lp_d1")
+    op1 = st.selectbox("Operador R1", ["≤", "≥", "="], key="lp_op1")
 
-    with col4:
-        d1 = st.number_input("R1: límite", value=100.0)
-        d2 = st.number_input("R2: límite", value=80.0)
+    if usar_r2:
+        col1, col2, col3 = st.columns([2, 2, 2])
+        with col1:
+            a2 = st.number_input("R2: coeficiente de x", value=1.0, key="lp_a2")
+        with col2:
+            b2 = st.number_input("R2: coeficiente de y", value=2.0, key="lp_b2")
+        with col3:
+            d2 = st.number_input("R2: límite", value=80.0, key="lp_d2")
+        op2 = st.selectbox("Operador R2", ["≤", "≥", "="], key="lp_op2")
+    else:
+        # La restricción inactiva se representa como 0 <= 0 para el cálculo.
+        a2, b2, d2, op2 = 0.0, 0.0, 0.0, "≤"
 
     st.subheader("Modelo matemático")
-
     palabra = "Maximizar" if objetivo == "Maximizar" else "Minimizar"
     st.latex(rf"\text{{{palabra}}}\quad Z={cx:g}x+{cy:g}y")
     st.latex(rf"{a1:g}x+{b1:g}y\ {op1}\ {d1:g}")
-    st.latex(rf"{a2:g}x+{b2:g}y\ {op2}\ {d2:g}")
+    if usar_r2:
+        st.latex(rf"{a2:g}x+{b2:g}y\ {op2}\ {d2:g}")
     st.latex(r"x,y\geq0")
 
     if st.button("Resolver problema", type="primary"):
@@ -823,7 +1081,7 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                 "Introduce solamente números finitos."
             )
 
-        elif (a1 == 0 and b1 == 0) or (a2 == 0 and b2 == 0):
+        elif (a1 == 0 and b1 == 0) or (usar_r2 and a2 == 0 and b2 == 0):
             st.error(
                 "Cada restricción debe tener al menos un "
                 "coeficiente distinto de cero."
@@ -870,7 +1128,7 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                     st.write("**2. Verificación de las restricciones**")
 
                     valor1 = a1 * x + b1 * y
-                    valor2 = a2 * x + b2 * y
+                    valor2 = a2 * x + b2 * y if usar_r2 else None
 
                     def restriccion_cumplida(valor, operador, limite):
                         if operador == "≤":
@@ -883,22 +1141,25 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                         rf"{a1:g}({x:.4f})+{b1:g}({y:.4f})"
                         rf"={valor1:.4f}\ {op1}\ {d1:g}"
                     )
-                    st.latex(
-                        rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
-                        rf"={valor2:.4f}\ {op2}\ {d2:g}"
-                    )
-
-                    if (
-                        restriccion_cumplida(valor1, op1, d1)
-                        and restriccion_cumplida(valor2, op2, d2)
-                    ):
-                        st.success(
-                            "La solución cumple las dos restricciones."
+                    cumple_r1 = restriccion_cumplida(valor1, op1, d1)
+                    if usar_r2:
+                        st.latex(
+                            rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
+                            rf"={valor2:.4f}\ {op2}\ {d2:g}"
                         )
+                        cumple_r2 = restriccion_cumplida(valor2, op2, d2)
                     else:
-                        st.error(
-                            "La solución no cumple alguna restricción."
+                        cumple_r2 = True
+
+                    if cumple_r1 and cumple_r2:
+                        texto_restricciones = (
+                            "La solución cumple ambas restricciones."
+                            if usar_r2
+                            else "La solución cumple la restricción especificada."
                         )
+                        st.success(texto_restricciones)
+                    else:
+                        st.error("La solución no cumple alguna restricción.")
 
                     st.success(
                         f"Solución encontrada: x = {x:.4f}, "
@@ -1060,6 +1321,13 @@ elif modulo == "Método Simplex":
     st.write(
         "Resuelve problemas de maximización con dos variables y "
         "restricciones de tipo ≤."
+    )
+    st.info(
+        "Alcance de esta versión: los coeficientes de la función objetivo "
+        "y los lados derechos deben ser no negativos; los coeficientes "
+        "de las restricciones también deben ser no negativos. Para modelos "
+        "con restricciones ≥ o =, minimización o coeficientes negativos, "
+        "utiliza Programación lineal."
     )
 
     st.latex(r"\text{Maximizar } Z=c_1x+c_2y")
@@ -1874,7 +2142,7 @@ elif modulo == "Modelación":
             st.write(
                 f"El objetivo es {objetivo_modelo.lower()} el valor de Z, "
                 f"calculado a partir de los coeficientes {coef_obj_x:g} "
-                f"y {coef_obj_y:g}. Las dos restricciones representan "
+                f"y {coef_obj_y:g}. Las restricciones representan "
                 "los límites de los recursos o condiciones del problema."
             )
 
@@ -2367,6 +2635,9 @@ else:
 
 
 
+
+if modulo != "Inicio":
+    mostrar_tutor_ia(modulo)
 
 st.divider()
 st.caption(
