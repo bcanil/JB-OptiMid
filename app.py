@@ -707,7 +707,7 @@ def _consultar_gemini(instrucciones, mensaje, json_mode=False):
             response_mime_type="application/json" if json_mode else "text/plain"
         )
         respuesta = cliente.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.8-flash",
             contents=mensaje,
             config=configuracion
         )
