@@ -977,23 +977,30 @@ Responde en español.
 elif modulo in ["Programación lineal", "Método gráfico"]:
     pendiente_ia = st.session_state.get("ia_lp_pendiente")
     if pendiente_ia and modulo == "Programación lineal":
+        tiene_r2_pendiente = (
+            all(pendiente_ia.get(campo) is not None for campo in ["a2", "b2", "d2"])
+            and pendiente_ia.get("op2") in ["≤", "≥", "="]
+        )
+        # Reemplazar todos los campos, incluso cuando la IA no detectó R2.
+        # Así no quedan valores antiguos o predeterminados de otra sesión.
         mapa_campos = {
-            "lp_objetivo": pendiente_ia.get("objetivo"),
-            "lp_cx": pendiente_ia.get("cx"), "lp_cy": pendiente_ia.get("cy"),
-            "lp_a1": pendiente_ia.get("a1"), "lp_b1": pendiente_ia.get("b1"),
-            "lp_d1": pendiente_ia.get("d1"), "lp_a2": pendiente_ia.get("a2"),
-            "lp_b2": pendiente_ia.get("b2"), "lp_d2": pendiente_ia.get("d2"),
-            "lp_op1": pendiente_ia.get("op1"), "lp_op2": pendiente_ia.get("op2"),
-            "lp_usar_r2": all(
-                pendiente_ia.get(campo) is not None
-                for campo in ["a2", "b2", "d2"]
-            ) and pendiente_ia.get("op2") in ["≤", "≥", "="]
+            "lp_objetivo": pendiente_ia.get("objetivo", "Maximizar"),
+            "lp_cx": float(pendiente_ia.get("cx") or 0),
+            "lp_cy": float(pendiente_ia.get("cy") or 0),
+            "lp_a1": float(pendiente_ia.get("a1") or 0),
+            "lp_b1": float(pendiente_ia.get("b1") or 0),
+            "lp_d1": float(pendiente_ia.get("d1") or 0),
+            "lp_a2": float(pendiente_ia.get("a2") or 0),
+            "lp_b2": float(pendiente_ia.get("b2") or 0),
+            "lp_d2": float(pendiente_ia.get("d2") or 0),
+            "lp_op1": pendiente_ia.get("op1") or "≤",
+            "lp_op2": pendiente_ia.get("op2") if tiene_r2_pendiente else "≤",
+            "lp_usar_r2": tiene_r2_pendiente
         }
         for clave, valor in mapa_campos.items():
-            if valor is not None:
-                st.session_state[clave] = valor
+            st.session_state[clave] = valor
         st.session_state["ia_lp_pendiente"] = None
-        st.success("La IA preparó los campos. Revísalos y pulsa Resolver problema cuando estés listo.")
+        st.success("Los datos del enunciado se cargaron en los campos. Revísalos y pulsa Resolver problema cuando estés listo.")
     st.header("🧮 " + modulo)
 
     st.write(
