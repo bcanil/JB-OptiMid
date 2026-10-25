@@ -446,7 +446,10 @@ def mostrar_grafica(
     valores_x = [0.0, x_opt]
     valores_y = [0.0, y_opt]
 
-    for a, b, d in [(a1, b1, d1), (a2, b2, d2)]:
+    restricciones_rango = [(a1, b1, d1)]
+    if not (a2 == 0 and b2 == 0):
+        restricciones_rango.append((a2, b2, d2))
+    for a, b, d in restricciones_rango:
         if a != 0:
             valores_x.append(abs(d / a))
         if b != 0:
@@ -467,12 +470,9 @@ def mostrar_grafica(
             return expresion >= d - 1e-9
         return np.abs(expresion - d) <= 1e-3
 
-    factible = (
-        cumple(X, Y, a1, b1, d1, op1)
-        & cumple(X, Y, a2, b2, d2, op2)
-        & (X >= 0)
-        & (Y >= 0)
-    )
+    factible = cumple(X, Y, a1, b1, d1, op1) & (X >= 0) & (Y >= 0)
+    if not (a2 == 0 and b2 == 0):
+        factible &= cumple(X, Y, a2, b2, d2, op2)
 
     fig = go.Figure()
 
@@ -491,10 +491,10 @@ def mostrar_grafica(
         ))
 
     # Dibujar las rectas de las restricciones
-    for a, b, d, operador, nombre in [
-        (a1, b1, d1, op1, "Restricción 1"),
-        (a2, b2, d2, op2, "Restricción 2")
-    ]:
+    restricciones_grafica = [(a1, b1, d1, op1, "Restricción 1")]
+    if not (a2 == 0 and b2 == 0):
+        restricciones_grafica.append((a2, b2, d2, op2, "Restricción 2"))
+    for a, b, d, operador, nombre in restricciones_grafica:
         if b != 0:
             y_recta = (d - a * xs) / b
             fig.add_trace(go.Scatter(
@@ -620,10 +620,9 @@ def resolver_simplex(c1, c2, a1, b1, d1, a2, b2, d2):
 def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
     candidatos = [(0.0, 0.0)]
 
-    restricciones = [
-        (a1, b1, d1),
-        (a2, b2, d2)
-    ]
+    restricciones = [(a1, b1, d1)]
+    if not (a2 == 0 and b2 == 0):
+        restricciones.append((a2, b2, d2))
 
     # Intersecciones de cada recta con los ejes
     for a, b, d in restricciones:
@@ -658,7 +657,7 @@ def calcular_vertices(a1, b1, d1, op1, a2, b2, d2, op2):
         if not cumple(a1 * x + b1 * y, op1, d1):
             continue
 
-        if not cumple(a2 * x + b2 * y, op2, d2):
+        if not (a2 == 0 and b2 == 0) and not cumple(a2 * x + b2 * y, op2, d2):
             continue
 
         punto = (max(0.0, x), max(0.0, y))
@@ -858,9 +857,14 @@ simplex, no_identificado), objetivo (Maximizar, Minimizar o cadena vacía),
 cx, cy, a1, b1, d1, a2, b2, d2 (números o null), op1, op2 (≤, ≥, = o cadena
 vacía), explicacion (cadena), faltantes (lista de cadenas), confianza
 (alta, media o baja). Nunca inventes valores. Usa null para datos ausentes.
-Interpreta solo programación lineal de dos variables y dos restricciones si
-hay evidencia suficiente. Si el problema es transporte, asignación o inventarios,
-clasifícalo sin forzar los datos al modelo de programación lineal. Responde en español.
+Interpreta programación lineal de dos variables con una o más restricciones.
+Extrae únicamente las restricciones que estén explícitas en el enunciado.
+Si solo existe una restricción, deja a2, b2, d2 como null y op2 como cadena vacía;
+no inventes una segunda restricción. Si no se especifica ninguna otra condición,
+no la marques como dato faltante. Si faltan datos esenciales de una restricción
+mencionada, indícalos en faltantes. Si el problema es transporte, asignación o
+inventarios, clasifícalo sin forzar los datos al modelo de programación lineal.
+Responde en español.
 """
             with st.spinner("Analizando el enunciado..."):
                 resultado_ia, error_ia = _consultar_gemini(
@@ -888,12 +892,20 @@ clasifícalo sin forzar los datos al modelo de programación lineal. Responde en
             campos = ["objetivo", "cx", "cy", "a1", "b1", "op1", "d1", "a2", "b2", "op2", "d2"]
             st.write("**Datos extraídos. Revísalos antes de resolver:**")
             st.json({campo: modelo_ia.get(campo) for campo in campos})
-            requeridos = ["cx", "cy", "a1", "b1", "d1", "a2", "b2", "d2"]
+            requeridos = ["cx", "cy", "a1", "b1", "d1"]
+            tiene_r2 = all(
+                modelo_ia.get(campo) is not None
+                for campo in ["a2", "b2", "d2"]
+            ) and modelo_ia.get("op2") in ["≤", "≥", "="]
+            sin_r2 = (
+                all(modelo_ia.get(campo) is None for campo in ["a2", "b2", "d2"])
+                and modelo_ia.get("op2") in [None, ""]
+            )
             completo = (
                 all(modelo_ia.get(campo) is not None for campo in requeridos)
                 and modelo_ia.get("objetivo") in ["Maximizar", "Minimizar"]
                 and modelo_ia.get("op1") in ["≤", "≥", "="]
-                and modelo_ia.get("op2") in ["≤", "≥", "="]
+                and (tiene_r2 or sin_r2)
             )
             if completo:
                 if st.button("Preparar campos de Programación lineal", type="primary"):
@@ -934,7 +946,11 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
             "lp_a1": pendiente_ia.get("a1"), "lp_b1": pendiente_ia.get("b1"),
             "lp_d1": pendiente_ia.get("d1"), "lp_a2": pendiente_ia.get("a2"),
             "lp_b2": pendiente_ia.get("b2"), "lp_d2": pendiente_ia.get("d2"),
-            "lp_op1": pendiente_ia.get("op1"), "lp_op2": pendiente_ia.get("op2")
+            "lp_op1": pendiente_ia.get("op1"), "lp_op2": pendiente_ia.get("op2"),
+            "lp_usar_r2": all(
+                pendiente_ia.get(campo) is not None
+                for campo in ["a2", "b2", "d2"]
+            ) and pendiente_ia.get("op2") in ["≤", "≥", "="]
         }
         for clave, valor in mapa_campos.items():
             if valor is not None:
@@ -944,8 +960,8 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
     st.header("🧮 " + modulo)
 
     st.write(
-        "Introduce los coeficientes de tu problema. Esta versión "
-        "trabaja con dos variables y dos restricciones de tipo ≤."
+        "Introduce los coeficientes de la función objetivo y las restricciones "
+        "que realmente aparecen en el enunciado. Puedes usar una o dos restricciones."
     )
 
     objetivo = st.selectbox(
@@ -962,35 +978,40 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
         cy = st.number_input("Coeficiente de y en Z", value=30.0, key="lp_cy")
 
     st.subheader("Restricciones")
+    usar_r2 = st.checkbox(
+        "Este problema tiene una segunda restricción",
+        key="lp_usar_r2",
+        help="Actívala solo si el enunciado incluye otra condición."
+    )
 
-    col1, col2, col3, col4 = st.columns([2, 2, 1, 2])
-
+    col1, col2, col3 = st.columns([2, 2, 2])
     with col1:
         a1 = st.number_input("R1: coeficiente de x", value=2.0, key="lp_a1")
-        a2 = st.number_input("R2: coeficiente de x", value=1.0, key="lp_a2")
-
     with col2:
         b1 = st.number_input("R1: coeficiente de y", value=1.0, key="lp_b1")
-        b2 = st.number_input("R2: coeficiente de y", value=2.0, key="lp_b2")
-
     with col3:
-        op1 = st.selectbox(
-            "Operador R1", ["≤", "≥", "="], key="lp_op1"
-        )
-        op2 = st.selectbox(
-            "Operador R2", ["≤", "≥", "="], key="lp_op2"
-        )
-
-    with col4:
         d1 = st.number_input("R1: límite", value=100.0, key="lp_d1")
-        d2 = st.number_input("R2: límite", value=80.0, key="lp_d2")
+    op1 = st.selectbox("Operador R1", ["≤", "≥", "="], key="lp_op1")
+
+    if usar_r2:
+        col1, col2, col3 = st.columns([2, 2, 2])
+        with col1:
+            a2 = st.number_input("R2: coeficiente de x", value=1.0, key="lp_a2")
+        with col2:
+            b2 = st.number_input("R2: coeficiente de y", value=2.0, key="lp_b2")
+        with col3:
+            d2 = st.number_input("R2: límite", value=80.0, key="lp_d2")
+        op2 = st.selectbox("Operador R2", ["≤", "≥", "="], key="lp_op2")
+    else:
+        # La restricción inactiva se representa como 0 <= 0 para el cálculo.
+        a2, b2, d2, op2 = 0.0, 0.0, 0.0, "≤"
 
     st.subheader("Modelo matemático")
-
     palabra = "Maximizar" if objetivo == "Maximizar" else "Minimizar"
     st.latex(rf"\text{{{palabra}}}\quad Z={cx:g}x+{cy:g}y")
     st.latex(rf"{a1:g}x+{b1:g}y\ {op1}\ {d1:g}")
-    st.latex(rf"{a2:g}x+{b2:g}y\ {op2}\ {d2:g}")
+    if usar_r2:
+        st.latex(rf"{a2:g}x+{b2:g}y\ {op2}\ {d2:g}")
     st.latex(r"x,y\geq0")
 
     if st.button("Resolver problema", type="primary"):
@@ -1003,7 +1024,7 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                 "Introduce solamente números finitos."
             )
 
-        elif (a1 == 0 and b1 == 0) or (a2 == 0 and b2 == 0):
+        elif (a1 == 0 and b1 == 0) or (usar_r2 and a2 == 0 and b2 == 0):
             st.error(
                 "Cada restricción debe tener al menos un "
                 "coeficiente distinto de cero."
@@ -1050,7 +1071,7 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                     st.write("**2. Verificación de las restricciones**")
 
                     valor1 = a1 * x + b1 * y
-                    valor2 = a2 * x + b2 * y
+                    valor2 = a2 * x + b2 * y if usar_r2 else None
 
                     def restriccion_cumplida(valor, operador, limite):
                         if operador == "≤":
@@ -1063,22 +1084,25 @@ elif modulo in ["Programación lineal", "Método gráfico"]:
                         rf"{a1:g}({x:.4f})+{b1:g}({y:.4f})"
                         rf"={valor1:.4f}\ {op1}\ {d1:g}"
                     )
-                    st.latex(
-                        rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
-                        rf"={valor2:.4f}\ {op2}\ {d2:g}"
-                    )
-
-                    if (
-                        restriccion_cumplida(valor1, op1, d1)
-                        and restriccion_cumplida(valor2, op2, d2)
-                    ):
-                        st.success(
-                            "La solución cumple las dos restricciones."
+                    cumple_r1 = restriccion_cumplida(valor1, op1, d1)
+                    if usar_r2:
+                        st.latex(
+                            rf"{a2:g}({x:.4f})+{b2:g}({y:.4f})"
+                            rf"={valor2:.4f}\ {op2}\ {d2:g}"
                         )
+                        cumple_r2 = restriccion_cumplida(valor2, op2, d2)
                     else:
-                        st.error(
-                            "La solución no cumple alguna restricción."
+                        cumple_r2 = True
+
+                    if cumple_r1 and cumple_r2:
+                        texto_restricciones = (
+                            "La solución cumple ambas restricciones."
+                            if usar_r2
+                            else "La solución cumple la restricción especificada."
                         )
+                        st.success(texto_restricciones)
+                    else:
+                        st.error("La solución no cumple alguna restricción.")
 
                     st.success(
                         f"Solución encontrada: x = {x:.4f}, "
