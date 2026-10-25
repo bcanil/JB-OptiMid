@@ -970,6 +970,8 @@ Responde en español.
             st.warning("Datos faltantes o por confirmar: " + "; ".join(map(str, faltantes)))
         tipo_detectado = str(modelo_ia.get("tipo", "no_identificado"))
         datos_ia = modelo_ia.get("datos") or {}
+        if "objetivo" not in datos_ia:
+            datos_ia["objetivo"] = modelo_ia.get("objetivo")
 
         if tipo_detectado == "programacion_lineal":
             # Compatibilidad con resultados del formato anterior.
@@ -1014,8 +1016,6 @@ Responde en español.
                 "de que el módulo tenga un importador compatible; por ahora revisa estos "
                 "datos y completa el módulo correspondiente manualmente."
             )
-        else:
-            st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
         else:
             st.warning("No se pudo identificar el problema con suficiente seguridad. Selecciona un módulo y completa los datos manualmente.")
 
